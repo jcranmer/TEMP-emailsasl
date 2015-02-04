@@ -45,3 +45,27 @@ suite('LOGIN auth', function () {
     assert.equal(auth.authStep("UGFzc3dvcmQA"), "dGFuc3RhYWZ0YW5zdGFhZg==");
   });
 });
+
+suite('CRAM-MD5 auth', function () {
+  test('Basic support', function () {
+    var auth = quickAuth('CRAM-MD5', {user: "tim", pass: "tanstaaftanstaaf"});
+    assert.deepEqual(auth.tryNextAuth(), ["CRAM-MD5", false]);
+    assert.equal(auth.authStep(
+      "PDE4OTYuNjk3MTcwOTUyQHBvc3RvZmZpY2UucmVzdG9uLm1jaS5uZXQ+"),
+      "dGltIGI5MTNhNjAyYzdlZGE3YTQ5NWI0ZTZlNzMzNGQzODkw");
+  });
+});
+
+suite('SCRAM-SHA-1 auth', function () {
+  test('Basic support', function () {
+    var auth = quickAuth('SCRAM-SHA-1', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
+    auth._authModule.nonce = 'fyko+d2lbbFgONRv9qkxdawL';
+    assert.equal(auth.authStep(""),
+      "biwsbj11c2VyLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdM");
+    assert.equal(auth.authStep("cj1meWtvK2QybGJiRmdPTlJ2OXFreGRhd0wzcmZjTkhZSlkxWlZ2V1ZzN2oscz1RU1hDUitRNnNlazhiZjkyLGk9NDA5Ng=="),
+      "Yz1iaXdzLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdMM3JmY05IWUpZMVpWdldWczdqLHA9djBYOHYzQnoyVDBDSkdiSlF5RjBYK0hJNFRzPQ==");
+    assert.equal(auth.authStep("dj1ybUY5cHFWOFM3c3VBb1pXamE0ZEpSa0ZzS1E9"),
+      "");
+  });
+});
