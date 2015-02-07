@@ -37,7 +37,7 @@ function makeSCRAMModule(hashName) {
   function ScramModule(server, hostname, options) {
     this.user = options.user;
     this.pass = options.pass;
-    this.nonce = 'fyko+d2lbbFgONRv9qkxdawL';
+    this.nonce = crypto.randomBytes(hashLength).toString("base64");
   }
   ScramModule.isClientFirst = true;
   ScramModule.prototype.executeSteps = function*() {

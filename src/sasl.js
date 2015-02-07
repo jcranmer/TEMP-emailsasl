@@ -61,10 +61,11 @@ Authenticator.prototype.tryNextAuth = function () {
 Authenticator.prototype.authStep = function (serverStep) {
   if (this._currentAuthMethod && !this._authSteps) {
     this._authSteps = this._authModule.executeSteps(serverStep);
-    return this._authSteps.next().value;
+    var result = this._authSteps.next();
+  } else {
+    var result = this._authSteps.next(serverStep);
   }
-  var result = this._authSteps.next(serverStep);
-  return result.value;
+  return Promise.resolve(result.value);
 };
 
 var saslModules = {};
@@ -102,6 +103,30 @@ AuthLoginModule.prototype.executeSteps = function*() {
   yield saslUtils.stringToBase64UTF8(saslUtils.saslPrep(this.pass));
 };
 addSaslModule("LOGIN", AuthLoginModule);
+
+/**
+ * XOAUTH2 SASL mechanism -- see
+ * <https://developers.google.com/gmail/xoauth2_protocol> for details. This is
+ * a fork of <https://tools.ietf.org/html/draft-ietf-kitten-sasl-oauth>.
+ */
+function AuthXOAuth2Module(server, hostname, options) {
+  this.bearer = options.oauthbearer;
+}
+AuthXOAuth2Module.isClientFirst = true;
+AuthXOAuth2Module.prototype.executeSteps = function*() {
+  var error = yield saslUtils.stringToBase64UTF8(
+    "user=" + saslUtils.saslPrep(this.user) + "\x01auth=Bearer " +
+    this.bearer + "\x01\x01");
+
+  // If we succeeded, the server sends a success message instead of a
+  // continuation, so we're only here if an error occurred. We still need to
+  // send an empty response, though.
+  yield "";
+};
+addSaslModule("XOAUTH2", AuthXOAuth2Module);
+
+
+
 
 for (var method in saslCram) {
   addSaslModule(method, saslCram[method]);

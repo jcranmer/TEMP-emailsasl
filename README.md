@@ -16,6 +16,10 @@ authentication mechanisms. This library does not aim to implement these
 mechanisms for the server side, nor does it attempt to support channel-binding
 features of some SASL mechanisms.
 
+Since the major email protocols all implement SASL by requiring that the text be
+base64-encoded when sent over the protocol, this library automatically encodes
+the client messages and decodes the server messages internally.
+
 ## Usage
 
 ### AMD
@@ -41,6 +45,34 @@ where
 * **options** is an optional argument containing authentication parameters for
   specific mechanisms, see below for more details.
 
+Using the authenticator object to actually run, for example, an IMAP connection
+would look as follows:
+
+```javascript
+// imapCapabilities is returned by CAPABILITY
+var methods = imapCapabilities.filter(x => x.startswith('AUTH='))
+                              .map(x => x.substring(5));
+var auth = new sasl.Authenticator("imap", host, methods, options);
+var method;
+while ((method = auth.tryNextAuth()) != null) {
+  var line = getImapTag() + " AUTHENTICATE " + method[0];
+  if (imapCapabilities.includes("SASL-IR") && method[1])
+    line += " " + yield auth.authStep(""); // Send initial response
+  server.sendLine(line);
+  while (true) {
+    line = server.parseResponse();
+    if (line.isContinuation)
+      server.sendLine(yield auth.authStep(line.continuationData));
+    else
+      break;
+  }
+  // The auth method succeeded!
+  if (line.success)
+    break;
+  // If the auth method failed, try the next one...
+}
+```
+
 ## Custom SASL mechanisms
 Custom SASL mechanisms can be registerd using `sasl.addSaslModule(mech, mod)`,
 where
@@ -63,6 +95,23 @@ The `executeSteps` method is a generator.
 # Supported SASL mechanisms
 
 The following SASL mechanisms are supported:
+### [CRAM-MD5](http://tools.ietf.org/html/rfc2195)
+* **options.user** Username
+* **options.pass** Password
+
 ### [PLAIN](http://tools.ietf.org/html/rfc4616)
 * **options.user** Username
 * **options.pass** Password
+
+### [LOGIN](https://tools.ietf.org/html/draft-murchison-sasl-login-00)
+* **options.user** Username
+* **options.pass** Password
+
+### [SCRAM-SHA-1](http://tools.ietf.org/html/rfc5802)
+* **options.user** Username
+* **options.pass** Password
+
+### XOAUTH2
+* **options.user** Username
+* **options.oauthbearer** *String* The OAuth2 Bearer token to authenticate with.
+
