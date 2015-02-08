@@ -13,7 +13,10 @@
  *
  * For documentation of how these values are supposed to work, go see
  * <http://www.w3.org/TR/WebCryptoAPI>.
+ * @module sasl-crypto
+ * @private
  */
+
 var crypto = require('crypto');
 var webcrypto = {};
 

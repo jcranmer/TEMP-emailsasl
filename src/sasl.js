@@ -1,3 +1,7 @@
+/**
+ * The main SASL module.
+ * @module sasl
+ */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
     // AMD. Register as an anonymous module.
@@ -16,6 +20,17 @@
 /**
  * The service name is the SASL service name parameter (typically the lowercase
  * name of the protocol, e.g., imap or smtp).
+ * @constructor
+ * @alias module:sasl.Authenticator
+ * @param {String} serviceName The SASL service name parameter (e.g., imap).
+ * @param {String} hostname    The hostname to use as the realm for SASL.
+ * @param {String[]} supportedMechanisms The list of mechanisms supported by the
+ *                                       server.
+ * @param {Object} options     An options dictionary. See the particular
+ *                             mechanism for documentation about which
+ *                             parameters are needed and which are optional.
+ * @param {String} options.user The username to use for authentication.
+ * @param {String} options.pass The password to use for authentication.
  */
 function Authenticator(serviceName, hostname, supportedMechanisms, options) {
   if (!serviceName)
@@ -40,6 +55,16 @@ function Authenticator(serviceName, hostname, supportedMechanisms, options) {
     return supportedMechanisms.indexOf(m) >= 0;
   });
 }
+
+/**
+ * Try the next available SASL authentication mechanism. If no more mechanisms
+ * are available, null is returned. Otherwise, an array of two elements is
+ * returned, the first being the name of the mechanism to use, and the second
+ * whether or not the mechanism is client-first (and could therefore leverage a
+ * SASL-IR feature).
+ *
+ * @returns {?Array} If not null, the array has two elements as described above.
+ */
 Authenticator.prototype.tryNextAuth = function () {
   // Reset auth parameters
   this._authModule = null;
@@ -58,6 +83,16 @@ Authenticator.prototype.tryNextAuth = function () {
     this.service, this.hostname, this.options);
   return [this._currentAuthMethod, this._currentAuthClass.isClientFirst];
 };
+
+/**
+ * Perform a single authentication step. For a client initial-response, pass in
+ * the empty string as the server's first challenge. All values are expected to
+ * be base64-encoded strings, which means no translation is necessary when using
+ * IMAP, SMTP, or similar protocols (except for stripping CRLF or protocol
+ * tags).
+ * @param {String} serverStep The base64-encoded server challenge.
+ * @returns {Promise<String>} The base64-encoded client response.
+ */
 Authenticator.prototype.authStep = function (serverStep) {
   if (this._currentAuthMethod && !this._authSteps) {
     this._authSteps = this._authModule.executeSteps(serverStep);
@@ -69,6 +104,17 @@ Authenticator.prototype.authStep = function (serverStep) {
 };
 
 var saslModules = {};
+
+/**
+ * Add a custom SASL mechanism, in addition to the ones already registered.
+ *
+ * SASL mechanisms should be registered with [IANA]{@link
+ * http://www.iana.org/assignments/sasl-mechanisms}.
+ *
+ * @param {String} mechanism  The SASL mechanism string, in its canonical form.
+ * @param {SaslModule} module The SASL module implementation.
+ * @alias module:sasl.addSaslModule
+ */
 function addSaslModule(mechanism, module) {
   saslModules[mechanism] = module;
 }

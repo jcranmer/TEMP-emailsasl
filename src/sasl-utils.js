@@ -1,3 +1,8 @@
+/**
+ * This module contains a bunch of utilities for SASL implementers, partially
+ * to help bridge differences between Node.js and web browsers.
+ * @module sasl-utils
+ */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
     // AMD. Register as an anonymous module.
@@ -15,6 +20,10 @@
 
 /**
  * Run the result of SASLprep (RFC 4013 as of this writing) on the input string.
+ *
+ * @param {String} str The string to be prepared (e.g., a username).
+ * @returns {String}   The result of SASLprep.
+ * @alias module:sasl-utils.saslPrep
  */
 function saslPrep(str) {
   // If you don't want to go running off to the RFC, here's the basic rules on
@@ -42,6 +51,10 @@ function saslPrep(str) {
 /**
  * Convert a Unicode string into the base64 representation of its UTF-8-encoded
  * bytes.
+ *
+ * @param {String} str   The string to encode.
+ * @returns {Uint8Array} The base64-encoded array.
+ * @alias module:sasl-utils.stringToBase64UTF8
  */
 function stringToBase64UTF8(str) {
   return new Buffer(str, "UTF-8").toString("base64");
@@ -49,6 +62,10 @@ function stringToBase64UTF8(str) {
 
 /**
  * Convert a Unicode string into a Uint8Array of its UTF-8-encoded bytes.
+ *
+ * @param {String} str   The string to be converted.
+ * @returns {Uint8Array} The resulting array buffer.
+ * @alias module:sasl-utils.stringToArrayBuffer
  */
 function stringToArrayBuffer(str) {
   return new Uint8Array(new Buffer(str, "utf-8"));
@@ -57,6 +74,10 @@ function stringToArrayBuffer(str) {
 /**
  * Convert a Uint8Array into a string containing the base64 representation of
  * its contents.
+ *
+ * @param {Uint8Array} buf The buffer to be encoded.
+ * @returns {String}       The resulting base64-encoded string.
+ * @alias module:sasl-utils.arrayBufferToBase64
  */
 function arrayBufferToBase64(buf) {
   return new Buffer(buf).toString("base64");
@@ -65,6 +86,10 @@ function arrayBufferToBase64(buf) {
 /**
  * Convert a string containing base64-encoded data into a Uint8Array containing
  * that data.
+ *
+ * @param {String} str   The base64-encoded string.
+ * @returns {Uint8Array} The decoded array buffer.
+ * @alias module:sasl-utils.base64ToArrayBuffer
  */
 function base64ToArrayBuffer(str) {
   return new Uint8Array(new Buffer(str, "base64"));
@@ -73,6 +98,10 @@ function base64ToArrayBuffer(str) {
 /**
  * Convert a string containing base64-encoded data into a Uint8Array containing
  * that data.
+ *
+ * @param {String} str The base64-encoded string.
+ * @returns {String}   The resulting base64-decoded string.
+ * @alias module:sasl-utils.base64ToBinaryString
  */
 function base64ToBinaryString(str) {
   return new Buffer(str, "base64").toString();
