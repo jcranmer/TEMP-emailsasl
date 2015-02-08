@@ -1,3 +1,19 @@
+/**
+ * This file contains a polyfill for the WebCrypto API for use on Node.js. Only
+ * the functions that are needed to implement CRAM-MD5 and SCRAM are
+ * implemented, since I needed a polyfill but none existed. This supports the
+ * following operations:
+ * * importKey: raw format only.
+ * * sign: HMAC
+ * * deriveBits: PBKDF2
+ * * deriveKey: PBKDF2 (for HMAC keys only)
+ * * digest: MD5 (not in WebCrypto), SHA-{1,256,384,512}
+ *
+ * Error handling is likely to work poorly in this polyfill.
+ *
+ * For documentation of how these values are supposed to work, go see
+ * <http://www.w3.org/TR/WebCryptoAPI>.
+ */
 var crypto = require('crypto');
 var webcrypto = {};
 

@@ -39,22 +39,51 @@ function saslPrep(str) {
   return str.normalize("NFKC");
 }
 
+/**
+ * Convert a Unicode string into the base64 representation of its UTF-8-encoded
+ * bytes.
+ */
 function stringToBase64UTF8(str) {
   return new Buffer(str, "UTF-8").toString("base64");
 }
 
+/**
+ * Convert a Unicode string into a Uint8Array of its UTF-8-encoded bytes.
+ */
+function stringToArrayBuffer(str) {
+  return new Uint8Array(new Buffer(str, "utf-8"));
+}
+
+/**
+ * Convert a Uint8Array into a string containing the base64 representation of
+ * its contents.
+ */
 function arrayBufferToBase64(buf) {
   return new Buffer(buf).toString("base64");
 }
 
+/**
+ * Convert a string containing base64-encoded data into a Uint8Array containing
+ * that data.
+ */
 function base64ToArrayBuffer(str) {
-  return new Buffer(str, "base64");
+  return new Uint8Array(new Buffer(str, "base64"));
+}
+
+/**
+ * Convert a string containing base64-encoded data into a Uint8Array containing
+ * that data.
+ */
+function base64ToBinaryString(str) {
+  return new Buffer(str, "base64").toString();
 }
 
 return {
   arrayBufferToBase64: arrayBufferToBase64,
   base64ToArrayBuffer: base64ToArrayBuffer,
+  base64ToBinaryString: base64ToBinaryString,
   saslPrep: saslPrep,
+  stringToArrayBuffer: stringToArrayBuffer,
   stringToBase64UTF8: stringToBase64UTF8,
 };
 }));

@@ -33,7 +33,7 @@ CramMD5Module.prototype.executeSteps = function*(initChallenge) {
     length: 128
   };
   var result = crypto.subtle.importKey("raw",
-    new Buffer(saslUtils.saslPrep(this.pass), "utf-8"),
+    saslUtils.stringToArrayBuffer(saslUtils.saslPrep(this.pass)),
     hmacAlgorithm, false, ['sign']
   ).then(function (hmacKey) {
     return crypto.subtle.sign(hmacAlgorithm, hmacKey,
@@ -50,7 +50,11 @@ CramMD5Module.prototype.executeSteps = function*(initChallenge) {
 };
 
 /**
- * SCRAM SASL mechanism family-- see RFC 5802 for details.
+ * SCRAM SASL mechanism family -- see RFC 5802 for details. The list of possible
+ * entries in this family comes from the IANA assignment:
+ * <http://www.iana.org/assignments/hash-function-text-names>, but we only
+ * support the SHA-1 and SHA-2 families since MD2 and MD5 are deprecated and
+ * AFAICT completely unused.
  */
 function makeSCRAMModule(hashName, hashLength) {
   var hmacAlgorithm = {
@@ -74,7 +78,7 @@ function makeSCRAMModule(hashName, hashLength) {
     var response = yield saslUtils.stringToBase64UTF8(gs2Header + clientFirst);
 
     // Parse the server response
-    var serverFirst = saslUtils.base64ToArrayBuffer(response).toString("utf-8");
+    var serverFirst = saslUtils.base64ToBinaryString(response);
     response = serverFirst.split(',');
     if (response[0].substring(0, 2) == 'm=')
       response.shift();
@@ -110,7 +114,7 @@ function makeSCRAMModule(hashName, hashLength) {
     // ClientKey := HMAC(SaltedPassword, "Client Key")
     var clientKey = saltedPassword.then(function (saltedPassword) {
       return crypto.subtle.sign(hmacAlgorithm, saltedPassword,
-        new Buffer("Client Key", "utf-8"));
+        saslUtils.stringToArrayBuffer("Client Key"));
     });
 
     // StoredKey := H(ClientKey)
@@ -124,7 +128,7 @@ function makeSCRAMModule(hashName, hashLength) {
     // ClientSignature := HMAC(StoredKey, AuthMessage)
     var clientSignature = storedKey.then(function (storedKey) {
       return crypto.subtle.sign(hmacAlgorithm, storedKey,
-        new Buffer(authMessage, 'utf-8'));
+        saslUtils.stringToArrayBuffer(authMessage));
     });
 
     // ClientProof := ClientKey XOR ClientSignature
@@ -148,7 +152,7 @@ function makeSCRAMModule(hashName, hashLength) {
     // ServerKey := HMAC(SaltedPassword, "Server Key")
     var serverKey = saltedPassword.then(function (saltedPassword) {
       return crypto.subtle.sign(hmacAlgorithm, saltedPassword,
-        new Buffer("Server Key", "utf-8"));
+        saslUtils.stringToArrayBuffer("Server Key"));
     }).then(function (serverKey) {
       return crypto.subtle.importKey("raw", serverKey, hmacAlgorithm, false,
           ['sign']);
@@ -157,7 +161,7 @@ function makeSCRAMModule(hashName, hashLength) {
     // ServerSignature := HMAC(ServerKey, AuthMessage)
     var serverSignature = serverKey.then(function (serverKey) {
       return crypto.subtle.sign(hmacAlgorithm, serverKey,
-          new Buffer(authMessage, 'utf-8'));
+        saslUtils.stringToArrayBuffer(authMessage));
     });
 
     var verificationPromise = serverSignature.then(function (serverSignature) {
