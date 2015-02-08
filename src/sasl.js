@@ -18,8 +18,12 @@
 }(this, function (saslUtils, saslCram) {
 
 /**
- * The service name is the SASL service name parameter (typically the lowercase
- * name of the protocol, e.g., imap or smtp).
+ * A class to run the SASL authentication procedures. This class handles the
+ * responsibility both of negotiating the SASL mechanism to use (via
+ * [tryNextAuth]{@link module:sasl.Authenticator#tryNextAuth}) and of the actual
+ * challenge/response nature of the framework (via [authStep]{@link
+ * module:sasl.Authenticator#authStep}).
+ *
  * @constructor
  * @alias module:sasl.Authenticator
  * @param {String} serviceName The SASL service name parameter (e.g., imap).
@@ -35,7 +39,7 @@
 function Authenticator(serviceName, hostname, supportedMechanisms, options) {
   if (!serviceName)
     throw new Exception("Service name is a required parameter");
-  
+
   if (!hostname)
     throw new Exception("Host name is a required parameter");
 

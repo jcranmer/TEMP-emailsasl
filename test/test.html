@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Email SASL Mocha tests</title>
+<link rel="stylesheet" href="../node_modules/mocha/mocha.css"/>
+<script src="../src/sasl-utils.js"></script>
+<script src="../src/sasl-cram.js"></script>
+<script src="../src/sasl.js"></script>
+<script src="../node_modules/chai/chai.js"></script>
+<script src="../node_modules/mocha/mocha.js"></script>
+<script>
+mocha.setup('tdd');
+var requireMap = {
+  'assert': chai.assert,
+  'sasl-utils': saslUtils,
+  'sasl-cram': saslCram,
+  'sasl': sasl
+};
+
+function require(name) {
+  var slash = name.lastIndexOf('/');
+  if (slash != -1)
+    name = name.substring(slash + 1);
+  return requireMap[name];
+}
+</script>
+<script src="test-sasl-utils.js"></script>
+<script src="test-authenticator.js"></script>
+</head>
+<body onload="mocha.run()">
+<div id="mocha"></div>
+</body>
+</html>

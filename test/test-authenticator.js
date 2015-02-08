@@ -1,7 +1,10 @@
 var assert = require("assert");
 var sasl = require("../src/sasl");
-var ES6Promise = require("es6-promise");
-ES6Promise.polyfill();
+
+if (typeof Promise === "undefined") {
+  var ES6Promise = require("es6-promise");
+  ES6Promise.polyfill();
+}
 
 function quickAuth(mechanism, opts) {
   return new sasl.Authenticator("imap", "localhost.localdomain",
