@@ -43,7 +43,7 @@ subtle.digest = function (algorithm, data) {
       return;
     }
     var hash = crypto.createHash(algMap[algorithm]);
-    hash.update(data);
+    hash.update(new Buffer(data));
     resolve(hash.digest());
   });
 };
@@ -58,7 +58,7 @@ subtle.importKey = function (format, keyData, algorithm, extractable, usages) {
       extractable: extractable,
       usages: usages,
       algorithm: algorithm,
-      _data: keyData
+      _data: new Buffer(keyData)
     });
   });
 };
@@ -69,7 +69,7 @@ subtle.sign = function (algorithm, key, data) {
       throw new Error("Cannot use this algorithm with this key");
     if (algorithm.name == "HMAC") {
       var hmac = crypto.createHmac(algMap[algorithm.hash], key._data);
-      hmac.update(data);
+      hmac.update(new Buffer(data));
       resolve(hmac.digest());
     } else {
       reject(new Error("Unknown algorithm " + algorithm.name));
@@ -84,8 +84,8 @@ function deriveBits(algorithm, key, length, usage) {
     if (algorithm.name != "PBKDF2")
       throw new Error("Unknown algorithm " + algorithm.name);
     var hashName = algMap[algorithm.hash];
-    crypto.pbkdf2(key._data, algorithm.salt, algorithm.iterations, length,
-      hashName, function (err, derived) {
+    crypto.pbkdf2(key._data, new Buffer(algorithm.salt), algorithm.iterations,
+      length, hashName, function (err, derived) {
         if (err)
           reject(err);
         else

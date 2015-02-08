@@ -9,7 +9,7 @@
     module.exports = factory(require('./sasl-utils'), require('./sasl-crypto-polyfill'));
   } else {
     // Browser globals (root is window)
-    root.saslCram = factory(root.saslUtils);
+    root.saslCram = factory(root.saslUtils, root.crypto);
   }
 }(this, function (saslUtils, crypto) {
 
@@ -60,7 +60,7 @@ function makeSCRAMModule(hashName, hashLength) {
   var hmacAlgorithm = {
     name: "HMAC",
     hash: hashName,
-    length: hashLength
+    length: hashLength * 8,
   };
   function ScramModule(server, hostname, options) {
     this.user = options.user;
@@ -105,8 +105,9 @@ function makeSCRAMModule(hashName, hashLength) {
       iterations: iterCount
     };
     var saltedPassword = crypto.subtle.importKey("raw",
-      saslUtils.saslPrep(this.pass),
+      saslUtils.stringToArrayBuffer(saslUtils.saslPrep(this.pass)),
       pbkdfAlgorithm, false, ['deriveKey']).then(function (passwordKey) {
+      hmacAlgorithm.length = 160;
         return crypto.subtle.deriveKey(pbkdfAlgorithm, passwordKey,
           hmacAlgorithm, false, ['sign']);
     });
@@ -134,8 +135,8 @@ function makeSCRAMModule(hashName, hashLength) {
     // ClientProof := ClientKey XOR ClientSignature
     var clientProof = Promise.all([clientKey, clientSignature]).then(
         function (values) {
-      var clientKey = values[0];
-      var clientSignature = values[1];
+      var clientKey = new Uint8Array(values[0]);
+      var clientSignature = new Uint8Array(values[1]);
       var clientProof = new Uint8Array(clientSignature.length);
       for (var i = 0; i < clientProof.length; i++)
         clientProof[i] = clientKey[i] ^ clientSignature[i];
@@ -165,6 +166,7 @@ function makeSCRAMModule(hashName, hashLength) {
     });
 
     var verificationPromise = serverSignature.then(function (serverSignature) {
+      serverSignature = new Uint8Array(serverSignature);
       var expected = 'v=' + saslUtils.arrayBufferToBase64(serverSignature);
       if (saslUtils.stringToBase64UTF8(expected) != serverFinal)
         throw new Error("Server's final response is unexpected");

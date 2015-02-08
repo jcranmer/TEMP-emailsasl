@@ -11,12 +11,21 @@
     // Node. Does not work with strict CommonJS, but
     // only CommonJS-like environments that support module.exports,
     // like Node.
-    module.exports = factory();
+    function TextEncoder(charset) {
+      this.encode = function (s) { return new Buffer(s, "utf-8"); };
+    }
+    function btoa(str) {
+      return new Buffer(str, "binary").toString("base64");
+    }
+    function atob(str) {
+      return new Buffer(str, "base64").toString("binary");
+    }
+    module.exports = factory(TextEncoder, btoa, atob);
   } else {
     // Browser globals (root is window)
-    root.saslUtils = factory();
+    root.saslUtils = factory(root.TextEncoder, btoa, atob);
   }
-}(this, function () {
+}(this, function (TextEncoder, btoa, atob) {
 
 /**
  * Run the result of SASLprep (RFC 4013 as of this writing) on the input string.
@@ -57,7 +66,7 @@ function saslPrep(str) {
  * @alias module:sasl-utils.stringToBase64UTF8
  */
 function stringToBase64UTF8(str) {
-  return new Buffer(str, "UTF-8").toString("base64");
+  return arrayBufferToBase64(stringToArrayBuffer(str));
 }
 
 /**
@@ -68,7 +77,7 @@ function stringToBase64UTF8(str) {
  * @alias module:sasl-utils.stringToArrayBuffer
  */
 function stringToArrayBuffer(str) {
-  return new Uint8Array(new Buffer(str, "utf-8"));
+  return new TextEncoder("UTF-8").encode(str);
 }
 
 /**
@@ -80,7 +89,10 @@ function stringToArrayBuffer(str) {
  * @alias module:sasl-utils.arrayBufferToBase64
  */
 function arrayBufferToBase64(buf) {
-  return new Buffer(buf).toString("base64");
+  var str = '';
+  for (var i = 0; i < buf.length; i++)
+    str += String.fromCharCode(buf[i]);
+  return btoa(str);
 }
 
 /**
@@ -92,7 +104,11 @@ function arrayBufferToBase64(buf) {
  * @alias module:sasl-utils.base64ToArrayBuffer
  */
 function base64ToArrayBuffer(str) {
-  return new Uint8Array(new Buffer(str, "base64"));
+  str = atob(str);
+  var buf = new Uint8Array(str.length);
+  for (var i = 0; i < str.length; i++)
+    buf[i] = str.charCodeAt(i);
+  return buf;
 }
 
 /**
@@ -104,7 +120,7 @@ function base64ToArrayBuffer(str) {
  * @alias module:sasl-utils.base64ToBinaryString
  */
 function base64ToBinaryString(str) {
-  return new Buffer(str, "base64").toString();
+  return atob(str);
 }
 
 return {
