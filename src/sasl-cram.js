@@ -6,12 +6,17 @@
     // Node. Does not work with strict CommonJS, but
     // only CommonJS-like environments that support module.exports,
     // like Node.
-    module.exports = factory(require('./sasl-utils'), require('crypto'));
+    module.exports = factory(require('./sasl-utils'), require('./sasl-crypto-polyfill'));
   } else {
     // Browser globals (root is window)
     root.saslCram = factory(root.saslUtils);
   }
 }(this, function (saslUtils, crypto) {
+
+var hexString = "0123456789abcdef";
+var hexBytes = [];
+for (var i = 0; i < 256; i++)
+  hexBytes[i] = hexString[Math.trunc(i / 16)] + hexString[i % 16];
 
 /**
  * CRAM-MD5 SASL mechanism -- see RFC 2195 for details.
@@ -22,22 +27,42 @@ function CramMD5Module(server, hostname, options) {
 }
 CramMD5Module.isClientFirst = false;
 CramMD5Module.prototype.executeSteps = function*(initChallenge) {
-  var hmac = crypto.createHmac("md5", saslUtils.saslPrep(this.pass));
-  hmac.update(saslUtils.base64ToArrayBuffer(initChallenge));
-  var result = hmac.digest("hex");
-  yield saslUtils.stringToBase64UTF8(saslUtils.saslPrep(this.user) + " " +
-    result);
+  var hmacAlgorithm = {
+    name: "HMAC",
+    hash: "MD5",
+    length: 128
+  };
+  var result = crypto.subtle.importKey("raw",
+    new Buffer(saslUtils.saslPrep(this.pass), "utf-8"),
+    hmacAlgorithm, false, ['sign']
+  ).then(function (hmacKey) {
+    return crypto.subtle.sign(hmacAlgorithm, hmacKey,
+      saslUtils.base64ToArrayBuffer(initChallenge));
+  }).then((function (result) {
+    var hexStr = '';
+    for (var i = 0; i < result.length; i++)
+      hexStr += hexBytes[result[i]];
+    return saslUtils.stringToBase64UTF8(
+      saslUtils.saslPrep(this.user) + " " + hexStr);
+  }).bind(this));
+
+  yield result;
 };
 
 /**
  * SCRAM SASL mechanism family-- see RFC 5802 for details.
  */
-function makeSCRAMModule(hashName) {
-  var hashLength = crypto.createHash(hashName).digest().length;
+function makeSCRAMModule(hashName, hashLength) {
+  var hmacAlgorithm = {
+    name: "HMAC",
+    hash: hashName,
+    length: hashLength
+  };
   function ScramModule(server, hostname, options) {
     this.user = options.user;
     this.pass = options.pass;
-    this.nonce = crypto.randomBytes(hashLength).toString("base64");
+    this.nonce = saslUtils.arrayBufferToBase64(
+      crypto.getRandomValues(new Uint8Array(hashLength)));
   }
   ScramModule.isClientFirst = true;
   ScramModule.prototype.executeSteps = function*() {
@@ -69,49 +94,81 @@ function makeSCRAMModule(hashName) {
 
     // Compute the ClientProof variable
     // SaltedPassword := Hi(Normalize(password), salt, i)
-    var saltedPassword = crypto.pbkdf2Sync(saslUtils.saslPrep(this.pass),
-      salt, iterCount, hashLength);
+    var pbkdfAlgorithm = {
+      name: "PBKDF2",
+      hash: hashName,
+      salt: salt,
+      iterations: iterCount
+    };
+    var saltedPassword = crypto.subtle.importKey("raw",
+      saslUtils.saslPrep(this.pass),
+      pbkdfAlgorithm, false, ['deriveKey']).then(function (passwordKey) {
+        return crypto.subtle.deriveKey(pbkdfAlgorithm, passwordKey,
+          hmacAlgorithm, false, ['sign']);
+    });
 
     // ClientKey := HMAC(SaltedPassword, "Client Key")
-    var hmac = crypto.createHmac(hashName, saltedPassword);
-    hmac.update(new Buffer("Client Key", "utf-8"));
-    var clientKey = hmac.digest();
+    var clientKey = saltedPassword.then(function (saltedPassword) {
+      return crypto.subtle.sign(hmacAlgorithm, saltedPassword,
+        new Buffer("Client Key", "utf-8"));
+    });
 
     // StoredKey := H(ClientKey)
-    var hash = crypto.createHash(hashName);
-    hash.update(clientKey);
-    var storedKey = hash.digest();
+    var storedKey = clientKey.then(function (clientKey) {
+      return crypto.subtle.digest(hashName, clientKey);
+    }).then(function (storedKey) {
+      return crypto.subtle.importKey("raw", storedKey, hmacAlgorithm, false,
+        ['sign']);
+    });
 
     // ClientSignature := HMAC(StoredKey, AuthMessage)
-    hmac = crypto.createHmac(hashName, storedKey);
-    hmac.update(authMessage, 'utf-8');
-    var clientSignature = hmac.digest();
+    var clientSignature = storedKey.then(function (storedKey) {
+      return crypto.subtle.sign(hmacAlgorithm, storedKey,
+        new Buffer(authMessage, 'utf-8'));
+    });
 
     // ClientProof := ClientKey XOR ClientSignature
-    var clientProof = new Uint8Array(clientSignature.length);
-    for (var i = 0; i < clientProof.length; i++)
-      clientProof[i] = clientKey[i] ^ clientSignature[i];
+    var clientProof = Promise.all([clientKey, clientSignature]).then(
+        function (values) {
+      var clientKey = values[0];
+      var clientSignature = values[1];
+      var clientProof = new Uint8Array(clientSignature.length);
+      for (var i = 0; i < clientProof.length; i++)
+        clientProof[i] = clientKey[i] ^ clientSignature[i];
+      return clientProof;
+    });
 
     // Now we can output the final message
-    var serverFinal = yield saslUtils.stringToBase64UTF8(
-      clientFinal + ',p=' + new Buffer(clientProof).toString('base64'));
+    var serverFinal = yield clientProof.then(function (clientProof) {
+      return saslUtils.stringToBase64UTF8(clientFinal + ',p=' +
+          saslUtils.arrayBufferToBase64(clientProof));
+    });
 
     // Verify the server response
     // ServerKey := HMAC(SaltedPassword, "Server Key")
-    hmac = crypto.createHmac(hashName, saltedPassword);
-    hmac.update(new Buffer("Server Key", "utf-8"));
-    var serverKey = hmac.digest();
+    var serverKey = saltedPassword.then(function (saltedPassword) {
+      return crypto.subtle.sign(hmacAlgorithm, saltedPassword,
+        new Buffer("Server Key", "utf-8"));
+    }).then(function (serverKey) {
+      return crypto.subtle.importKey("raw", serverKey, hmacAlgorithm, false,
+          ['sign']);
+    });
 
     // ServerSignature := HMAC(ServerKey, AuthMessage)
-    hmac = crypto.createHmac(hashName, serverKey);
-    hmac.update(authMessage, 'utf-8');
-    var serverSignature = hmac.digest();
-    var expected = 'v=' + serverSignature.toString('base64');
-    if (saslUtils.stringToBase64UTF8(expected) != serverFinal)
-      throw new Error("Server's final response is unexpected");
+    var serverSignature = serverKey.then(function (serverKey) {
+      return crypto.subtle.sign(hmacAlgorithm, serverKey,
+          new Buffer(authMessage, 'utf-8'));
+    });
+
+    var verificationPromise = serverSignature.then(function (serverSignature) {
+      var expected = 'v=' + saslUtils.arrayBufferToBase64(serverSignature);
+      if (saslUtils.stringToBase64UTF8(expected) != serverFinal)
+        throw new Error("Server's final response is unexpected");
+      return '';
+    });
 
     // Send the message signifying we've verified the server.
-    yield '';
+    yield verificationPromise;
   };
 
   return ScramModule;
@@ -120,6 +177,9 @@ function makeSCRAMModule(hashName) {
 
 return {
   "CRAM-MD5": CramMD5Module,
-  "SCRAM-SHA-1": makeSCRAMModule("sha1"),
+  "SCRAM-SHA-1": makeSCRAMModule("SHA-1", 20),
+  "SCRAM-SHA-256": makeSCRAMModule("SHA-256", 32),
+  "SCRAM-SHA-384": makeSCRAMModule("SHA-384", 48),
+  "SCRAM-SHA-512": makeSCRAMModule("SHA-512", 64),
 };
 }));

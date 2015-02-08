@@ -43,11 +43,16 @@ function stringToBase64UTF8(str) {
   return new Buffer(str, "UTF-8").toString("base64");
 }
 
+function arrayBufferToBase64(buf) {
+  return new Buffer(buf).toString("base64");
+}
+
 function base64ToArrayBuffer(str) {
   return new Buffer(str, "base64");
 }
 
 return {
+  arrayBufferToBase64: arrayBufferToBase64,
   base64ToArrayBuffer: base64ToArrayBuffer,
   saslPrep: saslPrep,
   stringToBase64UTF8: stringToBase64UTF8,
