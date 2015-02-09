@@ -160,6 +160,7 @@ addSaslModule("LOGIN", AuthLoginModule);
  * a fork of <https://tools.ietf.org/html/draft-ietf-kitten-sasl-oauth>.
  */
 function AuthXOAuth2Module(server, hostname, options) {
+  this.user = options.user;
   this.bearer = options.oauthbearer;
 }
 AuthXOAuth2Module.isClientFirst = true;

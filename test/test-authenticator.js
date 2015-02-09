@@ -22,6 +22,9 @@ function expectAndSend(auth, expected, send) {
   };
 }
 
+// Note: the test vectors for successful auth parameters are derived, wherever
+// possible, from the official test vectors in their specifications.
+
 suite('sasl.Authenticator', function () {
   test('Parameter sanity', function () {
     assert.throws(function () {
@@ -45,7 +48,7 @@ suite('sasl.Authenticator', function () {
   });
 });
 
-suite('PLAIN auth', function () {
+suite('PLAIN', function () {
   test('Basic support', function () {
     var auth = quickAuth('PLAIN', {user: "tim", pass: "tanstaaftanstaaf"});
     assert.deepEqual(auth.tryNextAuth(), ["PLAIN", true]);
@@ -54,7 +57,7 @@ suite('PLAIN auth', function () {
   });
 });
 
-suite('LOGIN auth', function () {
+suite('LOGIN', function () {
   test('Basic support', function () {
     var auth = quickAuth('LOGIN', {user: "tim", pass: "tanstaaftanstaaf"});
     assert.deepEqual(auth.tryNextAuth(), ["LOGIN", false]);
@@ -64,7 +67,7 @@ suite('LOGIN auth', function () {
   });
 });
 
-suite('CRAM-MD5 auth', function () {
+suite('CRAM-MD5', function () {
   test('Basic support', function () {
     var auth = quickAuth('CRAM-MD5', {user: "tim", pass: "tanstaaftanstaaf"});
     assert.deepEqual(auth.tryNextAuth(), ["CRAM-MD5", false]);
@@ -73,7 +76,7 @@ suite('CRAM-MD5 auth', function () {
   });
 });
 
-suite('SCRAM-SHA-1 auth', function () {
+suite('SCRAM-SHA-1', function () {
   test('Basic support', function () {
     var auth = quickAuth('SCRAM-SHA-1', {user: "user", pass: "pencil"});
     assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
@@ -87,4 +90,82 @@ suite('SCRAM-SHA-1 auth', function () {
         "dj1ybUY5cHFWOFM3c3VBb1pXamE0ZEpSa0ZzS1E9"))
       .then(expectStr(""));
   });
+  test('Random nonce', function () {
+    var auth = quickAuth('SCRAM-SHA-1', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
+    var nonce1 = auth._authModule.nonce;
+    auth = quickAuth('SCRAM-SHA-1', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
+    var nonce2 = auth._authModule.nonce;
+    // Two nonces should not be equal...
+    assert.notEqual(nonce1, nonce2);
+    // ... but be of the same length ...
+    assert.equal(nonce1.length, nonce2.length);
+    // ... this much exactly (base64-encoded length of internal hash size, or
+    // 20 bytes).
+    assert.equal(nonce1.length, Math.ceil(20 / 3) * 4);
+  });
+  test('Misauthenticated server', function () {
+    var auth = quickAuth('SCRAM-SHA-1', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
+    auth._authModule.nonce = 'fyko+d2lbbFgONRv9qkxdawL';
+    return auth.authStep("")
+      .then(expectAndSend(auth,
+        "biwsbj11c2VyLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdM",
+        "cj1meWtvK2QybGJiRmdPTlJ2OXFreGRhd0wzcmZjTkhZSlkxWlZ2V1ZzN2oscz1RU1hDUitRNnNlazhiZjkyLGk9NDA5Ng=="))
+      .then(expectAndSend(auth,
+        "Yz1iaXdzLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdMM3JmY05IWUpZMVpWdldWczdqLHA9djBYOHYzQnoyVDBDSkdiSlF5RjBYK0hJNFRzPQ==",
+        "dj1ybUY5cHFWOFM3c3VAAAAAAAAAAAAAAAAAAAAA"))
+      .then(function (e) { assert.fail(false, true, "Server should fail"); },
+        function (e) {
+          assert.equal(e.message, "Server's final response is unexpected");
+        });
+  });
+  test('Malformed server-first response (missing s=)', function () {
+    var auth = quickAuth('SCRAM-SHA-1', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
+    auth._authModule.nonce = 'fyko+d2lbbFgONRv9qkxdawL';
+    return auth.authStep("")
+      .then(expectAndSend(auth,
+        "biwsbj11c2VyLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdM",
+        "cj1meWtvK2QybGIsaT00MDk2"))
+      .then(function (e) { assert.fail(false, true, "Server should fail"); },
+        function (e) { assert.equal(e.message, "Malformed server response"); });
+  });
+  test('Malformed server-first response (out-of-order)', function () {
+    var auth = quickAuth('SCRAM-SHA-1', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
+    auth._authModule.nonce = 'fyko+d2lbbFgONRv9qkxdawL';
+    return auth.authStep("")
+      .then(expectAndSend(auth,
+        "biwsbj11c2VyLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdM",
+        "cj1meWtvK2QybGIsaT00MDk2LHM9UVNYQ1IrUTZzZWs4YmY5Mg=="))
+      .then(function (e) { assert.fail(false, true, "Server should fail"); },
+        function (e) { assert.equal(e.message, "Malformed server response"); });
+  });
 });
+
+suite('XOAUTH2', function () {
+  test('Basic support', function () {
+    var auth = quickAuth('XOAUTH2', {
+      user: "someuser@example.com",
+      oauthbearer: "vF9dft4qmTc2Nvb3RlckBhdHRhdmlzdGEuY29tCg=="
+    });
+    assert.deepEqual(auth.tryNextAuth(), ["XOAUTH2", true]);
+    return auth.authStep("")
+      .then(expectStr("dXNlcj1zb21ldXNlckBleGFtcGxlLmNvbQFhdXRoPUJlYXJlciB2RjlkZnQ0cW1UYzJOdmIzUmxja0JoZEhSaGRtbHpkR0V1WTI5dENnPT0BAQ=="));
+  });
+  test('Server auth error', function () {
+    var auth = quickAuth('XOAUTH2', {
+      user: "someuser@example.com",
+      oauthbearer: "vF9dft4qmTc2Nvb3RlckBhdHRhdmlzdGEuY29tCg=="
+    });
+    assert.deepEqual(auth.tryNextAuth(), ["XOAUTH2", true]);
+    return auth.authStep("")
+      .then(expectAndSend(auth,
+          "dXNlcj1zb21ldXNlckBleGFtcGxlLmNvbQFhdXRoPUJlYXJlciB2RjlkZnQ0cW1UYzJOdmIzUmxja0JoZEhSaGRtbHpkR0V1WTI5dENnPT0BAQ==",
+         "eyJzdGF0dXMiOiI0MDEiLCJzY2hlbWVzIjoiYmVhcmVyIG1hYyIsInNjb3BlIjoiaHR0cHM6Ly9tYWlsLmdvb2dsZS5jb20vIn0K"))
+      .then(expectStr(""));
+  });
+});
+
