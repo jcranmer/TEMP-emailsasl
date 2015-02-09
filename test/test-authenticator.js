@@ -46,6 +46,49 @@ suite('sasl.Authenticator', function () {
       new sasl.Authenticator("imap", "localhost.localdomain", ["PLAIN"]);
     });
   });
+  test('Authentication method fallback', function() {
+    function makeAuth(methods, opts) {
+      if (opts === undefined)
+        opts = {user: 'a', pass: 'b', oauthbearer: 'somestring'};
+      return new sasl.Authenticator("imap", "localhost.localdomain", methods,
+        opts);
+    }
+    var auth = makeAuth(["LOGIN", "PLAIN"]);
+    assert.equal(auth.tryNextAuth()[0], "PLAIN");
+    assert.equal(auth.tryNextAuth()[0], "LOGIN");
+    assert.equal(auth.tryNextAuth(), null);
+
+    auth = makeAuth(["PLAIN", "SCRAM-SHA-1", "CRAM-MD5"]);
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
+    assert.equal(auth.tryNextAuth()[0], "CRAM-MD5");
+    assert.equal(auth.tryNextAuth()[0], "PLAIN");
+    assert.equal(auth.tryNextAuth(), null);
+
+    auth = makeAuth(["SCRAM-SHA-512", "SCRAM-SHA-1"]);
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-512");
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
+    assert.equal(auth.tryNextAuth(), null);
+
+    auth = makeAuth(["XOAUTH2", "SCRAM-SHA-1", "PLAIN"]);
+    assert.equal(auth.tryNextAuth()[0], "XOAUTH2");
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
+    assert.equal(auth.tryNextAuth()[0], "PLAIN");
+    assert.equal(auth.tryNextAuth(), null);
+
+    auth = makeAuth(["XOAUTH2", "SCRAM-SHA-1", "PLAIN"],
+      {user: "a", pass: "b"});
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
+    assert.equal(auth.tryNextAuth()[0], "PLAIN");
+    assert.equal(auth.tryNextAuth(), null);
+
+    auth = makeAuth(["XOAUTH2", "SCRAM-SHA-1", "PLAIN"],
+      {user: "a", oauthbearer: "bearerstring"});
+    assert.equal(auth.tryNextAuth()[0], "XOAUTH2");
+    assert.equal(auth.tryNextAuth(), null);
+
+    auth = makeAuth(["XOAUTH2", "SCRAM-SHA-1", "PLAIN"], {});
+    assert.equal(auth.tryNextAuth(), null);
+  });
 });
 
 suite('PLAIN', function () {

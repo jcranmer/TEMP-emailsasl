@@ -84,13 +84,25 @@ SASL module classes have the following API:
 ```javascript
 function CustomModule(serviceName, hostname, options) { }
 CustomModule.isClientFirst = /* */;
-CustomModule.prototype.executeSteps = function*() {};
+CustomModule.prototype.isValid = function () {};
+CustomModule.prototype.executeSteps = function*(initialChallenge) {};
 ```
 
 The parameters of the function are passed through from the `Authenticator`
 constructor. The `isClientFirst` static property is a boolean property that, if
 true, allows for an initial response to be sent without waiting for the server.
-The `executeSteps` method is a generator.
+
+The `isValid` method is a function that returns true if the configuration
+details passed in via the options is sufficient to attempt the authentication
+method. For example, the `XOAUTH2` mechanism would return false if a bearer
+string were not present.
+
+The `executeSteps` method is a generator. This generator produces a client
+response for every server message sent to it. All messages are passed to and
+from the SASL module as strings containing the base64-encoded message; the
+`sasl-utils` module provides some utilities for handling these. The generator
+can optionally return a Promise if the computations involved are asynchronous
+(for example, using the WebCrypto API).
 
 # Supported SASL mechanisms
 

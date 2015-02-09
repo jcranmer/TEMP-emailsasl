@@ -26,6 +26,9 @@ function CramMD5Module(server, hostname, options) {
   this.pass = options.pass;
 }
 CramMD5Module.isClientFirst = false;
+CramMD5Module.prototype.isValid = function () {
+  return this.user && this.pass;
+};
 CramMD5Module.prototype.executeSteps = function*(initChallenge) {
   var hmacAlgorithm = {
     name: "HMAC",
@@ -69,6 +72,9 @@ function makeSCRAMModule(hashName, hashLength) {
       crypto.getRandomValues(new Uint8Array(hashLength)));
   }
   ScramModule.isClientFirst = true;
+  ScramModule.prototype.isValid = function () {
+    return this.user && this.pass;
+  };
   ScramModule.prototype.executeSteps = function*() {
     var user = saslUtils.saslPrep(this.user)
                         .replace(',', "=2C")

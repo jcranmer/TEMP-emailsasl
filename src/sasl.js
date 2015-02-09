@@ -53,11 +53,13 @@ function Authenticator(serviceName, hostname, supportedMechanisms, options) {
   this.hostname = hostname;
   this.options = options;
 
-  // XXX: Need prioritized list of auth methods
-  var desiredAuthMethods = Object.keys(saslModules);
-  this._authMethods = desiredAuthMethods.filter(function (m) {
+  // Choose the methods to try in order. The list is reversed, since we pop off
+  // in #tryNextAuth below.
+  var authMethods = desiredAuthMethods;
+  this._authMethods = authMethods.filter(function (m) {
     return supportedMechanisms.indexOf(m) >= 0;
   });
+  this._authMethods.reverse();
 }
 
 /**
@@ -70,22 +72,24 @@ function Authenticator(serviceName, hostname, supportedMechanisms, options) {
  * @returns {?Array} If not null, the array has two elements as described above.
  */
 Authenticator.prototype.tryNextAuth = function () {
+  // Do we have another auth method left to try?
+  while (this._authMethods.length != 0) {
+    this._currentAuthMethod = this._authMethods.pop();
+    var authClass = saslModules[this._currentAuthMethod];
+    this._authModule = new (authClass)(this.service, this.hostname,
+      this.options);
+    if (!this._authModule.isValid())
+      continue;
+
+    return [this._currentAuthMethod, authClass.isClientFirst];
+  }
+
   // Reset auth parameters
   this._authModule = null;
   this._authSteps = null;
   this._currentAuthMethod = '';
-  this._currentAuthClass = null;
 
-  // Do we have another auth method left to try?
-  if (this._authMethods.length == 0) {
-    return null;
-  }
-
-  this._currentAuthMethod = this._authMethods.pop();
-  this._currentAuthClass = saslModules[this._currentAuthMethod];
-  this._authModule = new (this._currentAuthClass)(
-    this.service, this.hostname, this.options);
-  return [this._currentAuthMethod, this._currentAuthClass.isClientFirst];
+  return null;
 };
 
 /**
@@ -131,6 +135,9 @@ function AuthPlainModule(server, hostname, options) {
   this.pass = options.pass;
 }
 AuthPlainModule.isClientFirst = true;
+AuthPlainModule.prototype.isValid = function () {
+  return this.user && this.pass;
+};
 AuthPlainModule.prototype.executeSteps = function*() {
   var message = "\0" + saslUtils.saslPrep(this.user) + "\0" +
     saslUtils.saslPrep(this.pass);
@@ -147,6 +154,9 @@ function AuthLoginModule(server, hostname, options) {
   this.pass = options.pass;
 }
 AuthLoginModule.isClientFirst = false;
+AuthLoginModule.prototype.isValid = function () {
+  return this.user && this.pass;
+};
 AuthLoginModule.prototype.executeSteps = function*() {
   // Ignore what the server sends.
   yield saslUtils.stringToBase64UTF8(saslUtils.saslPrep(this.user));
@@ -164,6 +174,9 @@ function AuthXOAuth2Module(server, hostname, options) {
   this.bearer = options.oauthbearer;
 }
 AuthXOAuth2Module.isClientFirst = true;
+AuthXOAuth2Module.prototype.isValid = function () {
+  return this.user && this.bearer;
+};
 AuthXOAuth2Module.prototype.executeSteps = function*() {
   var error = yield saslUtils.stringToBase64UTF8(
     "user=" + saslUtils.saslPrep(this.user) + "\x01auth=Bearer " +
@@ -176,15 +189,26 @@ AuthXOAuth2Module.prototype.executeSteps = function*() {
 };
 addSaslModule("XOAUTH2", AuthXOAuth2Module);
 
-
-
-
+// Import the encrypted methods from sasl-cram.js.
+var encryptedMethods = [];
 for (var method in saslCram) {
   addSaslModule(method, saslCram[method]);
+  encryptedMethods.push(method);
 }
+// The saslCram list comes in increasing order of security.
+encryptedMethods.reverse();
+
+// Build the desired authentication mechanism list. We prefer SSO mechanisms
+// first (since they'll be disabled if there's insufficient information), then
+// encrypted passwords, then unencrypted mechanisms.
+var desiredAuthMethods = ["XOAUTH2"].concat(encryptedMethods).concat([
+  "PLAIN", "LOGIN"
+]);
+
 
 return {
   Authenticator: Authenticator,
-  addSaslModule: addSaslModule
+  addSaslModule: addSaslModule,
+  desiredAuthMethods: desiredAuthMethods
 };
 }));
