@@ -6,6 +6,14 @@ if (typeof Promise === "undefined") {
   ES6Promise.polyfill();
 }
 
+if (typeof String.prototype.normalize === "undefined" ||
+    '\u00aa'.normalize("NFKC") == '\u00aa') {
+  var unorm = require('unorm');
+  String.prototype.normalize = function (kind) {
+    return unorm[kind.toLowerCase()](this);
+  };
+}
+
 function quickAuth(mechanism, opts) {
   return new sasl.Authenticator("imap", "localhost.localdomain",
     [mechanism], opts);

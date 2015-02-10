@@ -1,6 +1,14 @@
 var assert = require("assert");
 var saslutils = require("../src/sasl-utils");
 
+if (typeof String.prototype.normalize === "undefined" ||
+    '\u00aa'.normalize("NFKC") == '\u00aa') {
+  var unorm = require('unorm');
+  String.prototype.normalize = function (kind) {
+    return unorm[kind.toLowerCase()](this);
+  };
+}
+
 suite('sasl-utils', function () {
   test('saslPrep', function () {
     var testVectors = [
@@ -8,8 +16,8 @@ suite('sasl-utils', function () {
       ['I\u00adX', 'IX'],
       ['user', 'user'],
       ['USER', 'USER'],
-      //['\u00aa', 'a'],
-      //['\u2618', 'IX'], eff'ing node
+      ['\u00aa', 'a'],
+      ['\u2168', 'IX'],
       // Some more tests for our mapping
       ['\u200b', ' '],
     ];
