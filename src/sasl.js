@@ -35,6 +35,14 @@
  *                             parameters are needed and which are optional.
  * @param {String} options.user The username to use for authentication.
  * @param {String} options.pass The password to use for authentication.
+ * @param {String[]|String} options.desiredAuthMethods
+ *                             If present, this overrides the default
+ *                             authentication method list for which methods are
+ *                             preferred and acceptable. Methods are tried in
+ *                             the order they are present in the array.
+ *                             Alternatively, the value "encrypted" selects only
+ *                             methods that do challenge-response password-based
+ *                             authentication (e.g., CRAM-MD5, SCRAM-SHA-1).
  */
 function Authenticator(serviceName, hostname, supportedMechanisms, options) {
   if (!serviceName)
@@ -51,11 +59,16 @@ function Authenticator(serviceName, hostname, supportedMechanisms, options) {
 
   this.service = serviceName;
   this.hostname = hostname;
-  this.options = options;
+  this.options = options || {};
 
   // Choose the methods to try in order. The list is reversed, since we pop off
   // in #tryNextAuth below.
-  var authMethods = desiredAuthMethods;
+  var authMethods = this.options.desiredAuthMethods || desiredAuthMethods;
+  if (authMethods == "encrypted")
+    authMethods = encryptedMethods;
+  else if (!Array.isArray(authMethods))
+    throw new Error("desiredAuthMethods must either be an array or encrypted");
+
   this._authMethods = authMethods.filter(function (m) {
     return supportedMechanisms.indexOf(m) >= 0;
   });

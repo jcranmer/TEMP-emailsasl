@@ -45,6 +45,10 @@ suite('sasl.Authenticator', function () {
     assert.doesNotThrow(function () {
       new sasl.Authenticator("imap", "localhost.localdomain", ["PLAIN"]);
     });
+    assert.throws(function () {
+      new sasl.Authenticator("imap", "localhost.localdomain", [],
+        { desiredAuthMethods: "not an array" });
+    });
   });
   test('Authentication method fallback', function() {
     function makeAuth(methods, opts) {
@@ -88,6 +92,26 @@ suite('sasl.Authenticator', function () {
 
     auth = makeAuth(["XOAUTH2", "SCRAM-SHA-1", "PLAIN"], {});
     assert.equal(auth.tryNextAuth(), null);
+
+    // Why would you ever do this? ... Oh well.
+    auth = makeAuth(["SCRAM-SHA-1", "PLAIN"],
+      {user: "a", pass: "b", desiredAuthMethods: ["PLAIN", "SCRAM-SHA-1"]});
+    assert.equal(auth.tryNextAuth()[0], "PLAIN");
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
+    assert.equal(auth.tryNextAuth(), null);
+
+    auth = makeAuth(["SCRAM-SHA-1", "PLAIN"],
+      {user: "a", pass: "b", desiredAuthMethods: ["EXTERNAL"]});
+    assert.equal(auth.tryNextAuth(), null);
+
+    // Check the expected parameter
+    auth = makeAuth(["SCRAM-SHA-1", "PLAIN", "XOAUTH2", "CRAM-MD5"],
+      {user: "a", pass: "b", oauthbearer: "bearerstring",
+       desiredAuthMethods: "encrypted"});
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
+    assert.equal(auth.tryNextAuth()[0], "CRAM-MD5");
+    assert.equal(auth.tryNextAuth(), null);
+
   });
 });
 

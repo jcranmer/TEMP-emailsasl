@@ -26,6 +26,10 @@ the client messages and decodes the server messages internally.
 
 Require [sasl.js](src/sasl.js) as `sasl`.
 
+### Node.js
+
+Require [sasl.js](src/sasl.js).
+
 ## API
 
 The primary class is `sasl.Authenticator`, which implements the main layer used
@@ -44,6 +48,17 @@ where
 * **mechanisms** is an array of SASL mechanisms that the server supports.
 * **options** is an optional argument containing authentication parameters for
   specific mechanisms, see below for more details.
+
+The **user** and **pass** options on the **options** object are used by most
+SASL mechanisms to initialize the username and password, respectively. In
+addition to these two common options, the following options are supported by
+the `Authenticator` class directly:
+* **options.desiredAuthMethods** *Array* This list allows the client to override
+  the desired authentication method order on a per-connection basis, trying the
+  first method in the array, then the second, etc. Alternatively, using the
+  string `encrypted` instead of an array selects only the authentication methods
+  that encrypt the password before sending them (e.g., SCRAM-SHA-1 or CRAM-MD5,
+  but not XOAUTH2 or PLAIN).
 
 Using the authenticator object to actually run, for example, an IMAP connection
 would look as follows:
