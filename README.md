@@ -122,15 +122,22 @@ can optionally return a Promise if the computations involved are asynchronous
 # Supported SASL mechanisms
 
 The following SASL mechanisms are supported:
+### [ANONYMOUS](http://tools.ietf.org/html/rfc4505)
+* **options.user** Username (optional)
+
+Unlike other auth mechanisms, *ANONYMOUS* is only enabled if specifically
+requested via `options.desiredAuthMethods`, to avoid being selected if all other
+auth mechanisms fail.
+
 ### [CRAM-MD5](http://tools.ietf.org/html/rfc2195)
 * **options.user** Username
 * **options.pass** Password
 
-### [PLAIN](http://tools.ietf.org/html/rfc4616)
+### [LOGIN](https://tools.ietf.org/html/draft-murchison-sasl-login-00)
 * **options.user** Username
 * **options.pass** Password
 
-### [LOGIN](https://tools.ietf.org/html/draft-murchison-sasl-login-00)
+### [PLAIN](http://tools.ietf.org/html/rfc4616)
 * **options.user** Username
 * **options.pass** Password
 

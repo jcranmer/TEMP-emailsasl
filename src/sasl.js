@@ -178,6 +178,25 @@ AuthLoginModule.prototype.executeSteps = function*() {
 addSaslModule("LOGIN", AuthLoginModule);
 
 /**
+ * ANONYMOUS SASL mechanism -- see RFC 4505 for details. We do not advertise
+ * this mechanism in the default list of mechanisms; the user has to
+ * specifically request it.
+ */
+function AuthAnonModule(server, hostname, options) {
+  this.user = options.user || "";
+}
+AuthAnonModule.isClientFirst = true;
+AuthAnonModule.prototype.isValid = function () {
+  return true;
+};
+AuthAnonModule.prototype.executeSteps = function*() {
+  // No SASLprep--the user is really an authzid here, and that's not SASLprep'd
+  // (see §3 of RFC 4505 for more information).
+  yield saslUtils.stringToBase64UTF8(this.user);
+};
+addSaslModule("ANONYMOUS", AuthAnonModule);
+
+/**
  * XOAUTH2 SASL mechanism -- see
  * <https://developers.google.com/gmail/xoauth2_protocol> for details. This is
  * a fork of <https://tools.ietf.org/html/draft-ietf-kitten-sasl-oauth>.

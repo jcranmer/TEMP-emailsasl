@@ -260,3 +260,23 @@ suite('XOAUTH2', function () {
   });
 });
 
+suite('ANONYMOUS', function () {
+  test('Basic support', function () {
+    var auth = quickAuth('ANONYMOUS', {user: "sirhc",
+      desiredAuthMethods: ['ANONYMOUS']});
+    assert.deepEqual(auth.tryNextAuth(), ["ANONYMOUS", true]);
+    return auth.authStep("")
+      .then(expectStr("c2lyaGM="));
+  });
+  test('Only if requested', function () {
+    var auth = quickAuth('ANONYMOUS', {user: "sirhc"});
+    assert.equal(auth.tryNextAuth(), null);
+  });
+  test('No trace request', function () {
+    var auth = quickAuth('ANONYMOUS', {desiredAuthMethods: ['ANONYMOUS']});
+    assert.deepEqual(auth.tryNextAuth(), ["ANONYMOUS", true]);
+    return auth.authStep("")
+      .then(expectStr(""));
+  });
+});
+
