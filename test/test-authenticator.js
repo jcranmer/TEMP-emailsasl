@@ -220,6 +220,22 @@ suite('SCRAM-SHA-1', function () {
   });
 });
 
+suite('SCRAM-SHA-256', function () {
+  test('Basic support', function () {
+    var auth = quickAuth('SCRAM-SHA-256', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-256", true]);
+    auth._authModule.nonce = 'rOprNGfwEbeRWgbNEkqO';
+    return auth.authStep("")
+      .then(expectAndSend(auth,
+        "biwsbj11c2VyLHI9ck9wck5HZndFYmVSV2diTkVrcU8=",
+        "cj1yT3ByTkdmd0ViZVJXZ2JORWtxTyVodllEcFdVYTJSYVRDQWZ1eEZJbGopaE5sRiRrMCxzPVcyMlphSjBTTlk3c29Fc1VFamI2Z1E9PSxpPTQwOTY="))
+      .then(expectAndSend(auth,
+        "Yz1iaXdzLHI9ck9wck5HZndFYmVSV2diTkVrcU8laHZZRHBXVWEyUmFUQ0FmdXhGSWxqKWhObEYkazAscD1kSHpiWmFwV0lrNGpVaE4rVXRlOXl0YWc5empmTUhnc3FtbWl6N0FuZFZRPQ==",
+        "dj02cnJpVFJCaTIzV3BSUi93dHVwK21NaFVaVW4vZEI1bkxUSlJzamw5NUc0PQ=="))
+      .then(expectStr(""));
+  });
+});
+
 suite('XOAUTH2', function () {
   test('Basic support', function () {
     var auth = quickAuth('XOAUTH2', {
