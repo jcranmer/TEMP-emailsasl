@@ -130,11 +130,26 @@ suite('PLAIN', function () {
     return auth.authStep("")
       .then(expectStr("AHRpbQB0YW5zdGFhZnRhbnN0YWFm"));
   });
+  test('SASLprep username and password', function () {
+    var auth = quickAuth('PLAIN',
+      {user: "ti\u00adm", pass: "tanst\u00adaaftanstaaf"});
+    assert.deepEqual(auth.tryNextAuth(), ["PLAIN", true]);
+    return auth.authStep("")
+      .then(expectStr("AHRpbQB0YW5zdGFhZnRhbnN0YWFm"));
+  });
 });
 
 suite('LOGIN', function () {
   test('Basic support', function () {
     var auth = quickAuth('LOGIN', {user: "tim", pass: "tanstaaftanstaaf"});
+    assert.deepEqual(auth.tryNextAuth(), ["LOGIN", false]);
+    return auth.authStep("VXNlciBOYW1lAA==")
+      .then(expectAndSend(auth, "dGlt", "UGFzc3dvcmQA"))
+      .then(expectStr("dGFuc3RhYWZ0YW5zdGFhZg=="));
+  });
+  test('SASLprep username and password', function () {
+    var auth = quickAuth('LOGIN',
+      {user: "tim\u00ad", pass: "\u00adtanstaaftanstaaf"});
     assert.deepEqual(auth.tryNextAuth(), ["LOGIN", false]);
     return auth.authStep("VXNlciBOYW1lAA==")
       .then(expectAndSend(auth, "dGlt", "UGFzc3dvcmQA"))
@@ -149,11 +164,32 @@ suite('CRAM-MD5', function () {
     return auth.authStep("PDE4OTYuNjk3MTcwOTUyQHBvc3RvZmZpY2UucmVzdG9uLm1jaS5uZXQ+")
       .then(expectStr("dGltIGI5MTNhNjAyYzdlZGE3YTQ5NWI0ZTZlNzMzNGQzODkw"));
   });
+  test('SASLprep username and password', function () {
+    var auth = quickAuth('CRAM-MD5',
+      {user: "\u00adtim", pass: "tanstaaf\u00adtanstaaf"});
+    assert.deepEqual(auth.tryNextAuth(), ["CRAM-MD5", false]);
+    return auth.authStep("PDE4OTYuNjk3MTcwOTUyQHBvc3RvZmZpY2UucmVzdG9uLm1jaS5uZXQ+")
+      .then(expectStr("dGltIGI5MTNhNjAyYzdlZGE3YTQ5NWI0ZTZlNzMzNGQzODkw"));
+  });
 });
 
 suite('SCRAM-SHA-1', function () {
   test('Basic support', function () {
     var auth = quickAuth('SCRAM-SHA-1', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
+    auth._authModule.nonce = 'fyko+d2lbbFgONRv9qkxdawL';
+    return auth.authStep("")
+      .then(expectAndSend(auth,
+        "biwsbj11c2VyLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdM",
+        "cj1meWtvK2QybGJiRmdPTlJ2OXFreGRhd0wzcmZjTkhZSlkxWlZ2V1ZzN2oscz1RU1hDUitRNnNlazhiZjkyLGk9NDA5Ng=="))
+      .then(expectAndSend(auth,
+        "Yz1iaXdzLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdMM3JmY05IWUpZMVpWdldWczdqLHA9djBYOHYzQnoyVDBDSkdiSlF5RjBYK0hJNFRzPQ==",
+        "dj1ybUY5cHFWOFM3c3VBb1pXamE0ZEpSa0ZzS1E9"))
+      .then(expectStr(""));
+  });
+  test('SASLprep username and password', function () {
+    var auth = quickAuth('SCRAM-SHA-1',
+      {user: "user\u00ad", pass: "pencil\u00ad"});
     assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-1", true]);
     auth._authModule.nonce = 'fyko+d2lbbFgONRv9qkxdawL';
     return auth.authStep("")
@@ -223,6 +259,20 @@ suite('SCRAM-SHA-1', function () {
 suite('SCRAM-SHA-256', function () {
   test('Basic support', function () {
     var auth = quickAuth('SCRAM-SHA-256', {user: "user", pass: "pencil"});
+    assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-256", true]);
+    auth._authModule.nonce = 'rOprNGfwEbeRWgbNEkqO';
+    return auth.authStep("")
+      .then(expectAndSend(auth,
+        "biwsbj11c2VyLHI9ck9wck5HZndFYmVSV2diTkVrcU8=",
+        "cj1yT3ByTkdmd0ViZVJXZ2JORWtxTyVodllEcFdVYTJSYVRDQWZ1eEZJbGopaE5sRiRrMCxzPVcyMlphSjBTTlk3c29Fc1VFamI2Z1E9PSxpPTQwOTY="))
+      .then(expectAndSend(auth,
+        "Yz1iaXdzLHI9ck9wck5HZndFYmVSV2diTkVrcU8laHZZRHBXVWEyUmFUQ0FmdXhGSWxqKWhObEYkazAscD1kSHpiWmFwV0lrNGpVaE4rVXRlOXl0YWc5empmTUhnc3FtbWl6N0FuZFZRPQ==",
+        "dj02cnJpVFJCaTIzV3BSUi93dHVwK21NaFVaVW4vZEI1bkxUSlJzamw5NUc0PQ=="))
+      .then(expectStr(""));
+  });
+  test('SASLprep username and password', function () {
+    var auth = quickAuth('SCRAM-SHA-256',
+      {user: "\u00aduser", pass: "pe\u00adncil"});
     assert.deepEqual(auth.tryNextAuth(), ["SCRAM-SHA-256", true]);
     auth._authModule.nonce = 'rOprNGfwEbeRWgbNEkqO';
     return auth.authStep("")
