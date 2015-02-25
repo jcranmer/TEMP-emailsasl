@@ -7,9 +7,7 @@
   if (typeof define === 'function' && define.amd) {
     define([], function () { return factory(TextEncoder, btoa, atob); });
   } else if (typeof exports === 'object') {
-    // Node. Does not work with strict CommonJS, but
-    // only CommonJS-like environments that support module.exports,
-    // like Node.
+    // Shim functions for node.js
     function TextEncoder(charset) {
       this.encode = function (s) { return new Buffer(s, "utf-8"); };
     }
@@ -21,7 +19,6 @@
     }
     module.exports = factory(TextEncoder, btoa, atob);
   } else {
-    // Browser globals (root is window)
     root.saslUtils = factory(root.TextEncoder, btoa, atob);
   }
 }(this, function (TextEncoder, btoa, atob) {

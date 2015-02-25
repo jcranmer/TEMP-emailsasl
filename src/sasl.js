@@ -4,15 +4,10 @@
  */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
-    // AMD. Register as an anonymous module.
     define(['./sasl-utils', './sasl-cram'], factory);
   } else if (typeof exports === 'object') {
-    // Node. Does not work with strict CommonJS, but
-    // only CommonJS-like environments that support module.exports,
-    // like Node.
     module.exports = factory(require('./sasl-utils'), require('./sasl-cram'));
   } else {
-    // Browser globals (root is window)
     root.sasl = factory(root.saslUtils, root.saslCram);
   }
 }(this, function (saslUtils, saslCram) {

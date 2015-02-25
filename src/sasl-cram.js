@@ -1,16 +1,11 @@
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
-    // AMD. Register as an anonymous module.
     define(['./sasl-utils'], function (saslUtils) {
       return factory(saslUtils, crypto);
     });
   } else if (typeof exports === 'object') {
-    // Node. Does not work with strict CommonJS, but
-    // only CommonJS-like environments that support module.exports,
-    // like Node.
     module.exports = factory(require('./sasl-utils'), require('./sasl-crypto-polyfill'));
   } else {
-    // Browser globals (root is window)
     root.saslCram = factory(root.saslUtils, root.crypto);
   }
 }(this, function (saslUtils, crypto) {
