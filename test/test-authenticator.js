@@ -137,6 +137,14 @@ suite('PLAIN', function () {
     return auth.authStep("")
       .then(expectStr("AHRpbQB0YW5zdGFhZnRhbnN0YWFm"));
   });
+  test('Excessively chatty server', function () {
+    var auth = quickAuth('PLAIN', {user: "tim", pass: "tanstaaftanstaaf"});
+    assert.deepEqual(auth.tryNextAuth(), ["PLAIN", true]);
+    return auth.authStep("")
+      .then(expectAndSend(auth, "AHRpbQB0YW5zdGFhZnRhbnN0YWFm", "AAAA"))
+      .then(function (e) { throw new Error("Expected error"); },
+            function (e) { assert.equal(e.message, "Too many steps"); });
+  });
 });
 
 suite('LOGIN', function () {
@@ -155,6 +163,15 @@ suite('LOGIN', function () {
       .then(expectAndSend(auth, "dGlt", "UGFzc3dvcmQA"))
       .then(expectStr("dGFuc3RhYWZ0YW5zdGFhZg=="));
   });
+  test('Excessively chatty server', function () {
+    var auth = quickAuth('LOGIN', {user: "tim", pass: "tanstaaftanstaaf"});
+    assert.deepEqual(auth.tryNextAuth(), ["LOGIN", false]);
+    return auth.authStep("VXNlciBOYW1lAA==")
+      .then(expectAndSend(auth, "dGlt", "UGFzc3dvcmQA"))
+      .then(expectAndSend(auth, "dGFuc3RhYWZ0YW5zdGFhZg==", ""))
+      .then(function (e) { throw new Error("Expected error"); },
+            function (e) { assert.equal(e.message, "Too many steps"); });
+  });
 });
 
 suite('CRAM-MD5', function () {
@@ -170,6 +187,14 @@ suite('CRAM-MD5', function () {
     assert.deepEqual(auth.tryNextAuth(), ["CRAM-MD5", false]);
     return auth.authStep("PDE4OTYuNjk3MTcwOTUyQHBvc3RvZmZpY2UucmVzdG9uLm1jaS5uZXQ+")
       .then(expectStr("dGltIGI5MTNhNjAyYzdlZGE3YTQ5NWI0ZTZlNzMzNGQzODkw"));
+  });
+  test('Excessively chatty server', function () {
+    var auth = quickAuth('CRAM-MD5', {user: "tim", pass: "tanstaaftanstaaf"});
+    assert.deepEqual(auth.tryNextAuth(), ["CRAM-MD5", false]);
+    return auth.authStep("PDE4OTYuNjk3MTcwOTUyQHBvc3RvZmZpY2UucmVzdG9uLm1jaS5uZXQ+")
+      .then(expectAndSend(auth, "dGltIGI5MTNhNjAyYzdlZGE3YTQ5NWI0ZTZlNzMzNGQzODkw", ""))
+      .then(function (e) { throw new Error("Expected error"); },
+            function (e) { assert.equal(e.message, "Too many steps"); });
   });
 });
 

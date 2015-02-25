@@ -121,6 +121,8 @@ Authenticator.prototype.authStep = function (serverStep) {
   } else {
     var result = this._authSteps.next(serverStep);
   }
+  if (result.done)
+    return Promise.reject(new Error("Too many steps"));
   return Promise.resolve(result.value);
 };
 
