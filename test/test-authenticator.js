@@ -42,9 +42,6 @@ suite('sasl.Authenticator', function () {
       new sasl.Authenticator("imap");
     });
     assert.throws(function () {
-      new sasl.Authenticator("imap", "localhost");
-    });
-    assert.throws(function () {
       new sasl.Authenticator("imap", "localhost.localdomain");
     });
     assert.throws(function () {
@@ -52,6 +49,9 @@ suite('sasl.Authenticator', function () {
     });
     assert.doesNotThrow(function () {
       new sasl.Authenticator("imap", "localhost.localdomain", ["PLAIN"]);
+    });
+    assert.doesNotThrow(function () {
+      new sasl.Authenticator("imap", "localhost", ["PLAIN"]);
     });
     assert.throws(function () {
       new sasl.Authenticator("imap", "localhost.localdomain", [],
@@ -120,6 +120,19 @@ suite('sasl.Authenticator', function () {
     assert.equal(auth.tryNextAuth()[0], "CRAM-MD5");
     assert.equal(auth.tryNextAuth(), null);
 
+    // Ignore unknown auth types.
+    auth = makeAuth(["PLAIN", "SCRAM-SHA-1", "CRAM-MD5", "MRMAGICFUNTIME"]);
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
+    assert.equal(auth.tryNextAuth()[0], "CRAM-MD5");
+    assert.equal(auth.tryNextAuth()[0], "PLAIN");
+    assert.equal(auth.tryNextAuth(), null);
+
+    // Lowercase names should match.
+    auth = makeAuth(["plain", "scram-sha-1", "cram-md5"]);
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
+    assert.equal(auth.tryNextAuth()[0], "CRAM-MD5");
+    assert.equal(auth.tryNextAuth()[0], "PLAIN");
+    assert.equal(auth.tryNextAuth(), null);
   });
 });
 

@@ -46,16 +46,18 @@
  */
 function Authenticator(serviceName, hostname, supportedMechanisms, options) {
   if (!serviceName)
-    throw new Exception("Service name is a required parameter");
+    throw new Error("Service name is a required parameter");
 
   if (!hostname)
-    throw new Exception("Host name is a required parameter");
-
-  if (hostname.indexOf(".") < 0)
-    throw new Exception("Host name must be a fully-qualified domain name");
+    throw new Error("Host name is a required parameter");
 
   if (!Array.isArray(supportedMechanisms) || supportedMechanisms.length == 0)
-    throw new Exception("Need a list of mechanisms the server supports");
+    throw new Error("Need a list of mechanisms the server supports");
+
+  // Normalize to upper-case
+  supportedMechanisms = supportedMechanisms.map(function (m) {
+    return m.toUpperCase();
+  });
 
   this.service = serviceName;
   this.hostname = hostname;
