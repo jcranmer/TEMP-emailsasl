@@ -191,7 +191,5 @@ return {
   "CRAM-MD5": CramMD5Module,
   "SCRAM-SHA-1": makeSCRAMModule("SHA-1", 20),
   "SCRAM-SHA-256": makeSCRAMModule("SHA-256", 32),
-  "SCRAM-SHA-384": makeSCRAMModule("SHA-384", 48),
-  "SCRAM-SHA-512": makeSCRAMModule("SHA-512", 64),
 };
 }));

@@ -76,8 +76,8 @@ suite('sasl.Authenticator', function () {
     assert.equal(auth.tryNextAuth()[0], "PLAIN");
     assert.equal(auth.tryNextAuth(), null);
 
-    auth = makeAuth(["SCRAM-SHA-512", "SCRAM-SHA-1"]);
-    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-512");
+    auth = makeAuth(["SCRAM-SHA-256", "SCRAM-SHA-1"]);
+    assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-256");
     assert.equal(auth.tryNextAuth()[0], "SCRAM-SHA-1");
     assert.equal(auth.tryNextAuth(), null);
 
