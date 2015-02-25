@@ -1,3 +1,8 @@
+/**
+ * A library of challenge-response SASL mechanisms. These are split out from the
+ * main module, as these require more advanced crypto support.
+ * @module sasl-cram
+ */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
     define(['./sasl-utils'], function (saslUtils) {

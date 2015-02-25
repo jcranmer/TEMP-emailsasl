@@ -145,6 +145,10 @@ auth mechanisms fail.
 * **options.user** Username
 * **options.pass** Password
 
+### [SCRAM-SHA-256](http://tools.ietf.org/html/draft-hansen-scram-sha256)
+* **options.user** Username
+* **options.pass** Password
+
 ### XOAUTH2
 * **options.user** Username
 * **options.oauthbearer** *String* The OAuth2 Bearer token to authenticate with.
