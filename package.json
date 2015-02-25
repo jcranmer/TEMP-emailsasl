@@ -9,7 +9,7 @@
   ],
   "license": "MIT",
   "scripts": {
-    "test": "node --harmony_generators ./node_modules/.bin/grunt test"
+    "test": "NODE_PATH=./src node --harmony_generators ./node_modules/.bin/grunt test"
   },
   "repository": {
     "type": "git",
@@ -22,6 +22,7 @@
     "grunt": "^0.4.5",
     "grunt-mocha-test": "^0.12.7",
     "mocha": "^2.1.0",
+    "requirejs-browser": "^2.1.9",
     "unorm": "^1.3.3"
   }
 }

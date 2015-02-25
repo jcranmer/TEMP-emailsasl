@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Email SASL Mocha tests</title>
+<link rel="stylesheet" href="../node_modules/mocha/mocha.css"/>
+<script src="../node_modules/chai/chai.js"></script>
+<script src="../node_modules/mocha/mocha.js"></script>
+<script src="../node_modules/requirejs-browser/require.js"></script>
+<script>
+mocha.setup('tdd');
+require.config({
+  baseUrl: "../src",
+  paths: {test: "../test"}
+});
+
+define('assert', [], function () {
+  console.log("Hellow world!");
+  return chai.assert;
+});
+
+function runScript() {
+  require(['assert', 'sasl'], function () {
+    require(['test/test-sasl-utils', 'test/test-authenticator'], function () {
+      mocha.run();
+    });
+  });
+}
+</script>
+</head>
+<body onload="runScript()">
+<div id="mocha"></div>
+</body>
+</html>

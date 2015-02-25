@@ -1,5 +1,5 @@
 var assert = require("assert");
-var sasl = require("../src/sasl");
+var sasl = require("sasl");
 
 if (typeof Promise === "undefined") {
   var ES6Promise = require("es6-promise");

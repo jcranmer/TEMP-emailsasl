@@ -1,5 +1,5 @@
 var assert = require("assert");
-var saslutils = require("../src/sasl-utils");
+var saslutils = require("sasl-utils");
 
 if (typeof String.prototype.normalize === "undefined" ||
     '\u00aa'.normalize("NFKC") == '\u00aa') {
