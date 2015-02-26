@@ -55,11 +55,11 @@ CramMD5Module.prototype.executeSteps = function*(initChallenge) {
 };
 
 /**
- * SCRAM SASL mechanism family -- see RFC 5802 for details. The list of possible
- * entries in this family comes from the IANA assignment:
- * <http://www.iana.org/assignments/hash-function-text-names>, but we only
- * support the SHA-1 and SHA-2 families since MD2 and MD5 are deprecated and
- * AFAICT completely unused.
+ * SCRAM SASL mechanism family -- see RFC 5802 for details. This is actually a
+ * family of possible mechanisms derivable from the IANA hash list
+ * <http://www.iana.org/assignments/hash-function-text-names>, but registration
+ * requires a separate RFC. Presently, SHA-1 is explicitly registered and
+ * SHA-256 is a draft RFC.
  */
 function makeSCRAMModule(hashName, hashLength) {
   var hmacAlgorithm = {
@@ -151,13 +151,13 @@ function makeSCRAMModule(hashName, hashLength) {
       return clientProof;
     });
 
-    // Now we can output the final message
+    // Now we can output the final message.
     var serverFinal = yield clientProof.then(function (clientProof) {
       return saslUtils.stringToBase64UTF8(clientFinal + ',p=' +
           saslUtils.arrayBufferToBase64(clientProof));
     });
 
-    // Verify the server response
+    // Verify the server response.
     // ServerKey := HMAC(SaltedPassword, "Server Key")
     var serverKey = saltedPassword.then(function (saltedPassword) {
       return crypto.subtle.sign(hmacAlgorithm, saltedPassword,
