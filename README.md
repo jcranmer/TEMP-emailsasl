@@ -14,13 +14,16 @@ In addition to providing client implementations of several of the SASL
 mechanisms, this library provides an automatic fallback method of supported
 authentication mechanisms. This library does not aim to implement these
 mechanisms for the server side, nor does it attempt to support channel-binding
-features of some SASL mechanisms.
+or ongoing encryption features of some SASL mechanisms.
 
 Since the major email protocols all implement SASL by requiring that the text be
 base64-encoded when sent over the protocol, this library automatically encodes
 the client messages and decodes the server messages internally.
 
 ## Usage
+
+This API requires the use of ES6 promises and generators, as well as the
+TextEncoder and WebCrypto APIs. The latter are polyfilled for node.js use.
 
 ### AMD
 
@@ -88,8 +91,22 @@ while ((method = auth.tryNextAuth()) != null) {
 }
 ```
 
+The authenticator object has two methods. The `tryNextAuth` method is used to
+select the next authentication method, and either returns `null` (if no more
+authentication methods are available) or returns the array `[method,
+clientFirst]`, indicating the name of the chosen method and whether a SASL
+initial response is usable.
+
+To actually perform an authentication method, the `authStep` method used. Its
+parameter is a base64-encoded string value containing the server challenge (or
+the empty string in case of SASL initial response), and it returns a Promise
+which resolves to the base64-encoded string to send back to the server. The
+Promise can also be rejected if the server challenges are malformed; in this
+case, the authentication can be aborted (usually indicated by sending `*`
+instead of `+`) before attempting the next mechanism.
+
 ## Custom SASL mechanisms
-Custom SASL mechanisms can be registerd using `sasl.addSaslModule(mech, mod)`,
+Custom SASL mechanisms can be registered using `sasl.addSaslModule(mech, mod)`,
 where
 
 * **mech** is the SASL mechanism name, and
@@ -121,13 +138,15 @@ can optionally return a Promise if the computations involved are asynchronous
 
 # Supported SASL mechanisms
 
-The following SASL mechanisms are supported:
+The following SASL mechanisms are supported, along with the authentication
+parameters they use:
+
 ### [ANONYMOUS](http://tools.ietf.org/html/rfc4505)
 * **options.user** Username (optional)
 
 Unlike other auth mechanisms, *ANONYMOUS* is only enabled if specifically
-requested via `options.desiredAuthMethods`, to avoid being selected if all other
-auth mechanisms fail.
+requested via `options.desiredAuthMethods`; this is to avoid being selected if
+all other auth mechanisms fail.
 
 ### [CRAM-MD5](http://tools.ietf.org/html/rfc2195)
 * **options.user** Username
