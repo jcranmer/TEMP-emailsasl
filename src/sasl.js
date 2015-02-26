@@ -112,11 +112,12 @@ Authenticator.prototype.tryNextAuth = function () {
  * @returns {Promise<String>} The base64-encoded client response.
  */
 Authenticator.prototype.authStep = function (serverStep) {
+  var result;
   if (this._currentAuthMethod && !this._authSteps) {
     this._authSteps = this._authModule.executeSteps(serverStep);
-    var result = this._authSteps.next();
+    result = this._authSteps.next();
   } else {
-    var result = this._authSteps.next(serverStep);
+    result = this._authSteps.next(serverStep);
   }
   if (result.done)
     return Promise.reject(new Error("Too many steps"));

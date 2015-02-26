@@ -8,7 +8,7 @@
     define([], function () { return factory(TextEncoder, btoa, atob); });
   } else if (typeof exports === 'object') {
     // Shim functions for node.js
-    function TextEncoder(charset) {
+    function TextEncoder(/*charset*/) {
       this.encode = function (s) { return new Buffer(s, "utf-8"); };
     }
     function btoa(str) {
