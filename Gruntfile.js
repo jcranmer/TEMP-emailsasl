@@ -8,10 +8,20 @@ module.exports = function(grunt) {
       },
       src: ['test/*.js'],
     },
+    jsdoc: {
+      src: ['src/*.js'],
+      options: {
+        destination: 'docs',
+        readme: 'README.md',
+        private: false,
+      },
+    },
   });
 
   grunt.loadNpmTasks('grunt-mocha-test');
+  grunt.loadNpmTasks('grunt-jsdoc');
 
   grunt.registerTask('test', ['mochaTest']);
+  grunt.registerTask('docs', ['jsdoc']);
   grunt.registerTask('default', ['test']);
 };
