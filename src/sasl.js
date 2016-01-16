@@ -16,12 +16,10 @@
 /**
  * A class to run the SASL authentication procedures. This class handles the
  * responsibility both of negotiating the SASL mechanism to use (via
- * [tryNextAuth]{@link module:sasl.Authenticator#tryNextAuth}) and of the actual
+ * [tryNextAuth]{@link module:sasl~Authenticator#tryNextAuth}) and of the actual
  * challenge/response nature of the framework (via [authStep]{@link
- * module:sasl.Authenticator#authStep}).
+ * module:sasl~Authenticator#authStep}).
  *
- * @constructor
- * @alias module:sasl.Authenticator
  * @param {String} serviceName The SASL service name parameter (e.g., imap).
  * @param {String} hostname    The hostname to use as the realm for SASL.
  * @param {String[]} supportedMechanisms The list of mechanisms supported by the
@@ -52,9 +50,7 @@ class Authenticator {
       throw new Error("Need a list of mechanisms the server supports");
 
     // Normalize to upper-case
-    supportedMechanisms = supportedMechanisms.map(function (m) {
-      return m.toUpperCase();
-    });
+    supportedMechanisms = supportedMechanisms.map(m => m.toUpperCase());
 
     this.service = serviceName;
     this.hostname = hostname;
@@ -68,9 +64,8 @@ class Authenticator {
     else if (!Array.isArray(authMethods))
       throw new Error("desiredAuthMethods must either be an array or encrypted");
 
-    this._authMethods = authMethods.filter(function (m) {
-      return supportedMechanisms.indexOf(m) >= 0;
-    });
+    this._authMethods = authMethods.filter(
+      m => supportedMechanisms.indexOf(m) >= 0);
     this._authMethods.reverse();
   }
 
@@ -147,6 +142,7 @@ function addSaslModule(mechanism, module) {
 
 /**
  * PLAIN SASL mechanism -- see RFC 4616 for details.
+ * @private
  */
 class AuthPlainModule {
   constructor(server, hostname, options) {
@@ -170,6 +166,7 @@ addSaslModule("PLAIN", AuthPlainModule);
 /**
  * LOGIN SASL mechanism -- see
  * <https://tools.ietf.org/html/draft-murchison-sasl-login-00> for details.
+ * @private
  */
 class AuthLoginModule {
   constructor(server, hostname, options) {
@@ -194,6 +191,7 @@ addSaslModule("LOGIN", AuthLoginModule);
  * ANONYMOUS SASL mechanism -- see RFC 4505 for details. We do not advertise
  * this mechanism in the default list of mechanisms; the user has to
  * specifically request it.
+ * @private
  */
 class AuthAnonModule {
   constructor(server, hostname, options) {
@@ -216,7 +214,8 @@ addSaslModule("ANONYMOUS", AuthAnonModule);
 /**
  * XOAUTH2 SASL mechanism -- see
  * <https://developers.google.com/gmail/xoauth2_protocol> for details. This is
- * a fork of <https://tools.ietf.org/html/draft-ietf-kitten-sasl-oauth>.
+ * a fork of RFC 7628 from an early draft.
+ * @private
  */
 class AuthXOAuth2Module {
   constructor(server, hostname, options) {

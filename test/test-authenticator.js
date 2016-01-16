@@ -1,19 +1,6 @@
 var assert = require("assert");
 var sasl = require("sasl");
 
-if (typeof Promise === "undefined") {
-  var ES6Promise = require("es6-promise");
-  ES6Promise.polyfill();
-}
-
-if (typeof String.prototype.normalize === "undefined" ||
-    '\u00aa'.normalize("NFKC") == '\u00aa') {
-  var unorm = require('unorm');
-  String.prototype.normalize = function (kind) {
-    return unorm[kind.toLowerCase()](this);
-  };
-}
-
 function quickAuth(mechanism, opts) {
   return new sasl.Authenticator("imap", "localhost.localdomain",
     [mechanism], opts);

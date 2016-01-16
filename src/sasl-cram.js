@@ -2,6 +2,7 @@
  * A library of challenge-response SASL mechanisms. These are split out from the
  * main module, as these require more advanced crypto support.
  * @module sasl-cram
+ * @private
  */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
@@ -23,6 +24,7 @@ for (let i = 0; i < 256; i++)
 
 /**
  * CRAM-MD5 SASL mechanism -- see RFC 2195 for details.
+ * @private
  */
 class CramMD5Module {
   constructor(server, hostname, options) {
@@ -59,10 +61,9 @@ CramMD5Module.isClientFirst = false;
 
 /**
  * SCRAM SASL mechanism family -- see RFC 5802 for details. This is actually a
- * family of possible mechanisms derivable from the IANA hash list
- * <http://www.iana.org/assignments/hash-function-text-names>, but registration
- * requires a separate RFC. Presently, SHA-1 is explicitly registered and
- * SHA-256 is a draft RFC.
+ * family of possible mechanisms (the complete list may be found at
+ * <http://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml>).
+ * @private
  */
 
 class ScramModule {
