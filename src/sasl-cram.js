@@ -14,45 +14,48 @@
     root.saslCram = factory(root.saslUtils, root.crypto);
   }
 }(this, function (saslUtils, crypto) {
+"use strict";
 
-var hexString = "0123456789abcdef";
-var hexBytes = [];
-for (var i = 0; i < 256; i++)
+const hexString = "0123456789abcdef";
+const hexBytes = [];
+for (let i = 0; i < 256; i++)
   hexBytes[i] = hexString[Math.trunc(i / 16)] + hexString[i % 16];
 
 /**
  * CRAM-MD5 SASL mechanism -- see RFC 2195 for details.
  */
-function CramMD5Module(server, hostname, options) {
-  this.user = options.user;
-  this.pass = options.pass;
+class CramMD5Module {
+  constructor(server, hostname, options) {
+    this.user = options.user;
+    this.pass = options.pass;
+  }
+
+  isValid() {
+    return this.user && this.pass;
+  }
+
+  *executeSteps(initChallenge) {
+    let hmacAlgorithm = {
+      name: "HMAC",
+      hash: "MD5",
+      length: 128
+    };
+    let result = crypto.subtle.importKey("raw",
+      saslUtils.stringToArrayBuffer(saslUtils.saslPrep(this.pass)),
+      hmacAlgorithm, false, ['sign']
+    ).then(function (hmacKey) {
+      return crypto.subtle.sign(hmacAlgorithm, hmacKey,
+        saslUtils.base64ToArrayBuffer(initChallenge));
+    }).then((function (result) {
+      let hexStr = Array.from(result).map(val => hexBytes[val]).join('');
+      return saslUtils.stringToBase64UTF8(
+        saslUtils.saslPrep(this.user) + " " + hexStr);
+    }).bind(this));
+
+    yield result;
+  }
 }
 CramMD5Module.isClientFirst = false;
-CramMD5Module.prototype.isValid = function () {
-  return this.user && this.pass;
-};
-CramMD5Module.prototype.executeSteps = function*(initChallenge) {
-  var hmacAlgorithm = {
-    name: "HMAC",
-    hash: "MD5",
-    length: 128
-  };
-  var result = crypto.subtle.importKey("raw",
-    saslUtils.stringToArrayBuffer(saslUtils.saslPrep(this.pass)),
-    hmacAlgorithm, false, ['sign']
-  ).then(function (hmacKey) {
-    return crypto.subtle.sign(hmacAlgorithm, hmacKey,
-      saslUtils.base64ToArrayBuffer(initChallenge));
-  }).then((function (result) {
-    var hexStr = '';
-    for (var i = 0; i < result.length; i++)
-      hexStr += hexBytes[result[i]];
-    return saslUtils.stringToBase64UTF8(
-      saslUtils.saslPrep(this.user) + " " + hexStr);
-  }).bind(this));
-
-  yield result;
-};
 
 /**
  * SCRAM SASL mechanism family -- see RFC 5802 for details. This is actually a
@@ -61,121 +64,128 @@ CramMD5Module.prototype.executeSteps = function*(initChallenge) {
  * requires a separate RFC. Presently, SHA-1 is explicitly registered and
  * SHA-256 is a draft RFC.
  */
-function makeSCRAMModule(hashName, hashLength) {
-  var hmacAlgorithm = {
-    name: "HMAC",
-    hash: hashName,
-    length: hashLength * 8,
-  };
-  function ScramModule(server, hostname, options) {
+
+class ScramModule {
+  constructor(hashName, hashLength, options) {
+    this._hashName = hashName;
+    this._hashLength = hashLength;
+    this._hmacAlgorithm = {
+      name: "HMAC",
+      hash: hashName,
+      length: hashLength * 8,
+    };
+
     this.user = options.user;
     this.pass = options.pass;
+
+    // Create the nonce
     this.nonce = saslUtils.arrayBufferToBase64(
       crypto.getRandomValues(new Uint8Array(hashLength)));
   }
-  ScramModule.isClientFirst = true;
-  ScramModule.prototype.isValid = function () {
+
+  isValid() {
     return this.user && this.pass;
-  };
-  ScramModule.prototype.executeSteps = function*() {
-    var user = saslUtils.saslPrep(this.user)
+  }
+
+  *executeSteps() {
+    let user = saslUtils.saslPrep(this.user)
                         .replace(',', "=2C")
                         .replace('=', "=3D");
-    var gs2Header = 'n,,';
-    var clientFirst = 'n=' + user + ',r=' + this.nonce;
-    var response = yield saslUtils.stringToBase64UTF8(gs2Header + clientFirst);
+    let gs2Header = 'n,,';
+    let clientFirst = 'n=' + user + ',r=' + this.nonce;
+    let response = yield saslUtils.stringToBase64UTF8(gs2Header + clientFirst);
 
     // Parse the server response
-    var serverFirst = saslUtils.base64ToBinaryString(response);
+    let serverFirst = saslUtils.base64ToBinaryString(response);
     response = serverFirst.split(',');
     if (response[0].substring(0, 2) == 'm=')
       response.shift();
     if (response[0].substring(0, 2) != 'r=')
       throw new Error("Malformed server response");
-    var servernonce = response[0].substring(2);
+    let servernonce = response[0].substring(2);
     if (response[1].substring(0, 2) != 's=')
       throw new Error("Malformed server response");
-    var salt = saslUtils.base64ToArrayBuffer(response[1].substring(2));
+    let salt = saslUtils.base64ToArrayBuffer(response[1].substring(2));
     if (response[2].substring(0, 2) != 'i=')
       throw new Error("Malformed server response");
-    var iterCount = parseInt(response[2].substring(2));
+    let iterCount = parseInt(response[2].substring(2));
 
-    var clientFinal = 'c=' + saslUtils.stringToBase64UTF8(gs2Header) + ',r=' +
+    let clientFinal = 'c=' + saslUtils.stringToBase64UTF8(gs2Header) + ',r=' +
       servernonce;
-    var authMessage = [clientFirst, serverFirst, clientFinal].join(',');
+    let authMessage = [clientFirst, serverFirst, clientFinal].join(',');
 
     // Compute the ClientProof variable
     // SaltedPassword := Hi(Normalize(password), salt, i)
-    var pbkdfAlgorithm = {
+    let pbkdfAlgorithm = {
       name: "PBKDF2",
-      hash: hashName,
+      hash: this._hashName,
       salt: salt,
       iterations: iterCount
     };
-    var saltedPassword = crypto.subtle.importKey("raw",
+    let saltedPassword = crypto.subtle.importKey("raw",
       saslUtils.stringToArrayBuffer(saslUtils.saslPrep(this.pass)),
-      pbkdfAlgorithm, false, ['deriveKey']).then(function (passwordKey) {
-      hmacAlgorithm.length = 160;
+      pbkdfAlgorithm, false, ['deriveKey']).then((passwordKey) => {
+        this._hmacAlgorithm.length = 160;
         return crypto.subtle.deriveKey(pbkdfAlgorithm, passwordKey,
-          hmacAlgorithm, false, ['sign']);
+          this._hmacAlgorithm, false, ['sign']);
     });
 
     // ClientKey := HMAC(SaltedPassword, "Client Key")
-    var clientKey = saltedPassword.then(function (saltedPassword) {
-      return crypto.subtle.sign(hmacAlgorithm, saltedPassword,
+    let clientKey = saltedPassword.then((saltedPassword) => {
+      return crypto.subtle.sign(this._hmacAlgorithm, saltedPassword,
         saslUtils.stringToArrayBuffer("Client Key"));
     });
 
     // StoredKey := H(ClientKey)
-    var storedKey = clientKey.then(function (clientKey) {
-      return crypto.subtle.digest(hashName, clientKey);
-    }).then(function (storedKey) {
-      return crypto.subtle.importKey("raw", storedKey, hmacAlgorithm, false,
+    let storedKey = clientKey.then((clientKey) => {
+      return crypto.subtle.digest(this._hashName, clientKey);
+    }).then((storedKey) => {
+      return crypto.subtle.importKey("raw", storedKey, this._hmacAlgorithm, false,
         ['sign']);
     });
 
     // ClientSignature := HMAC(StoredKey, AuthMessage)
-    var clientSignature = storedKey.then(function (storedKey) {
-      return crypto.subtle.sign(hmacAlgorithm, storedKey,
+    let clientSignature = storedKey.then((storedKey) => {
+      return crypto.subtle.sign(this._hmacAlgorithm, storedKey,
         saslUtils.stringToArrayBuffer(authMessage));
     });
 
     // ClientProof := ClientKey XOR ClientSignature
-    var clientProof = Promise.all([clientKey, clientSignature]).then(
-        function (values) {
-      var clientKey = new Uint8Array(values[0]);
-      var clientSignature = new Uint8Array(values[1]);
-      var clientProof = new Uint8Array(clientSignature.length);
-      for (var i = 0; i < clientProof.length; i++)
+    let clientProof = Promise.all([clientKey, clientSignature]).then(
+        (values) => {
+      let clientKey = new Uint8Array(values[0]);
+      let clientSignature = new Uint8Array(values[1]);
+      let clientProof = new Uint8Array(clientSignature.length);
+      for (let i = 0; i < clientProof.length; i++)
         clientProof[i] = clientKey[i] ^ clientSignature[i];
       return clientProof;
     });
 
     // Now we can output the final message.
-    var serverFinal = yield clientProof.then(function (clientProof) {
+    let serverFinal = yield clientProof.then((clientProof) => {
       return saslUtils.stringToBase64UTF8(clientFinal + ',p=' +
           saslUtils.arrayBufferToBase64(clientProof));
     });
 
     // Verify the server response.
     // ServerKey := HMAC(SaltedPassword, "Server Key")
-    var serverKey = saltedPassword.then(function (saltedPassword) {
-      return crypto.subtle.sign(hmacAlgorithm, saltedPassword,
+    let serverKey = saltedPassword.then((saltedPassword) => {
+      return crypto.subtle.sign(this._hmacAlgorithm, saltedPassword,
         saslUtils.stringToArrayBuffer("Server Key"));
-    }).then(function (serverKey) {
-      return crypto.subtle.importKey("raw", serverKey, hmacAlgorithm, false,
+    }).then((serverKey) => {
+      return crypto.subtle.importKey("raw", serverKey, this._hmacAlgorithm, false,
           ['sign']);
     });
 
     // ServerSignature := HMAC(ServerKey, AuthMessage)
-    var serverSignature = serverKey.then(function (serverKey) {
-      return crypto.subtle.sign(hmacAlgorithm, serverKey,
+    let serverSignature = serverKey.then((serverKey) => {
+      return crypto.subtle.sign(this._hmacAlgorithm, serverKey,
         saslUtils.stringToArrayBuffer(authMessage));
     });
 
-    var verificationPromise = serverSignature.then(function (serverSignature) {
+    let verificationPromise = serverSignature.then((serverSignature) => {
       serverSignature = new Uint8Array(serverSignature);
-      var expected = 'v=' + saslUtils.arrayBufferToBase64(serverSignature);
+      let expected = 'v=' + saslUtils.arrayBufferToBase64(serverSignature);
       if (saslUtils.stringToBase64UTF8(expected) != serverFinal)
         throw new Error("Server's final response is unexpected");
       return '';
@@ -183,9 +193,18 @@ function makeSCRAMModule(hashName, hashLength) {
 
     // Send the message signifying we've verified the server.
     yield verificationPromise;
-  };
+  }
+}
+ScramModule.isClientFirst = true;
 
-  return ScramModule;
+function makeSCRAMModule(hashName, hashLength) {
+  class ConcreteScramModule extends ScramModule {
+    constructor(server, hostname, options) {
+      super(hashName, hashLength, options);
+    }
+  }
+
+  return ConcreteScramModule;
 }
 
 

@@ -9,7 +9,7 @@
   ],
   "license": "MIT",
   "scripts": {
-    "test": "NODE_PATH=./src node --harmony_generators ./node_modules/.bin/grunt test"
+    "test": "NODE_PATH=./src node ./node_modules/.bin/grunt test"
   },
   "repository": {
     "type": "git",
